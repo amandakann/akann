@@ -82,6 +82,7 @@ for (const g of labels) {
       const t = cnt / maxV;
       const ch = Math.round(255 * (1 - t * 0.8));
       td.style.background = 'rgb(255,' + ch + ',' + ch + ')';
+      td.id = g + '--' + p;
       td.className = 'click';
       td.title = 'gold:' + g + ' → pred:' + p + ': ' + cnt;
       td.addEventListener('click', (function(gl, pl, c, cell) {
@@ -92,11 +93,13 @@ for (const g of labels) {
 }
 
 function show(gL, pL, cnt, cell) {
+  history.replaceState(null, '', '#' + gL + '--' + pL);
   if (sel) sel.classList.remove('sel');
   cell.classList.add('sel');
   sel = cell;
   document.getElementById('sel-hdr').textContent =
     'gold: ' + gL + '  →  pred: ' + pL + '  (' + cnt + ' sentence' + (cnt !== 1 ? 's' : '') + ')';
+  document.getElementById('sentences-section').scrollIntoView({ behavior: 'smooth' });
   const list = document.getElementById('list');
   list.innerHTML = '';
   const sents = S[gL + '→' + pL] || [];
@@ -111,6 +114,11 @@ function show(gL, pL, cnt, cell) {
       '</div>';
     list.appendChild(d);
   }
+}
+
+if (location.hash) {
+  const cell = document.getElementById(location.hash.slice(1));
+  if (cell) { cell.click(); cell.scrollIntoView({ behavior: 'instant', block: 'center' }); }
 }
 
 function esc(s) {
