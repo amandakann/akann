@@ -129,11 +129,6 @@ function show(gL, pL, cnt, cell) {
   }
 }
 
-if (location.hash) {
-  const cell = document.getElementById(location.hash.slice(1));
-  if (cell) { cell.click(); cell.scrollIntoView({ behavior: 'instant', block: 'center' }); }
-}
-
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -165,6 +160,11 @@ function renderTable(comments, rows, tokenIds) {
   }
   h += '</tbody></table>';
   return h;
+}
+
+if (location.hash) {
+  const cell = document.getElementById(location.hash.slice(1));
+  if (cell) { cell.click(); cell.scrollIntoView({ behavior: 'instant', block: 'center' }); }
 }
 </script>
 </body>
