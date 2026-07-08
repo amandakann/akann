@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gloss2Parse evaluation &mdash; trends</title>
+<style>
+:root {
+  --surface: #fcfcfb; --plane: #f9f9f7;
+  --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #1a1a19; --plane: #0d0d0d;
+    --ink: #fff; --ink2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835;
+  }
+}
+* { box-sizing: border-box; }
+body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0; background: var(--plane); color: var(--ink); }
+#hdr { padding: 8px 16px; background: #2c3e50; color: #fff; display: flex; align-items: baseline; gap: 16px; }
+#hdr h1 { margin: 0; font-size: 1.1em; }
+#hdr a { color: #cfe3f2; font-size: 0.85em; text-decoration: none; }
+#hdr a:hover { text-decoration: underline; }
+#wrap { max-width: 1000px; margin: 16px auto; padding: 0 16px; }
+#controls { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+.seg { display: inline-flex; border: 1px solid var(--axis); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); color: var(--ink2); padding: 4px 12px; font: inherit; font-size: 0.85em; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: #2c3e50; color: #fff; }
+#legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 8px; }
+.lg { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82em; color: var(--ink2); cursor: pointer; user-select: none; padding: 2px 4px; border-radius: 4px; }
+.lg[data-off="1"] { opacity: 0.35; }
+.lg .sw { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+#chart { background: var(--surface); border: 1px solid var(--grid); border-radius: 6px; overflow-x: auto; }
+svg { display: block; width: 100%; height: auto; }
+.grid line { stroke: var(--grid); stroke-width: 1; }
+.axis text { fill: var(--muted); font-size: 11px; }
+.serie { fill: none; stroke-width: 2; }
+.dot { stroke: var(--surface); stroke-width: 1.5; }
+.endlab { font-size: 11px; font-weight: 600; fill: var(--ink2); }
+.crosshair { stroke: var(--axis); stroke-width: 1; stroke-dasharray: 3 3; }
+#tip { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--axis); border-radius: 6px; padding: 6px 9px; font-size: 0.78em; box-shadow: 0 2px 8px rgba(0,0,0,0.18); opacity: 0; transition: opacity 0.08s; z-index: 5; font-variant-numeric: tabular-nums; }
+#tip .cm { color: var(--muted); font-family: monospace; margin-bottom: 3px; }
+#tip .row { display: flex; justify-content: space-between; gap: 12px; }
+#tip .sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+#empty { color: var(--muted); font-style: italic; padding: 40px; text-align: center; }
+</style>
+</head>
+<body>
+<div id="hdr"><h1>Gloss2Parse evaluation &middot; trends</h1><a href="index.html">&larr; Index</a></div>
+<div id="wrap">
+  <div id="controls">
+    <span style="font-size:0.85em;color:var(--muted)">Average:</span>
+    <div class="seg" id="avgseg">
+      <button data-avg="macro" aria-pressed="true">macro</button>
+      <button data-avg="micro" aria-pressed="false">micro</button>
+    </div>
+  </div>
+  <div id="legend"></div>
+  <div id="chart"></div>
+</div>
+<div id="tip"></div>
+<script>
+const H = [{"timestamp":"2026-07-08T14:48:45+00:00","commit":"5a6a9c0","subject":"add macro/micro averages with history to eval","dirty":true,"n_treebanks":19,"total_tokens":250999,"macro":{"upos":0.5808399980699966,"uas":0.47536086331559446,"las":0.325455473326348,"clas":0.3292074845837202,"corelas":0.4745185369341972,"deprel":0.45890448065447553},"micro":{"upos":0.5614245475081574,"uas":0.4093123876987558,"las":0.26605285280021035,"clas":0.2776457229371688,"corelas":0.40980033277870215,"deprel":0.42900967732939177}}];
+const METRICS = [{"key":"upos","label":"UPOS","light":"#2a78d6","dark":"#3987e5"},{"key":"uas","label":"UAS","light":"#1baf7a","dark":"#199e70"},{"key":"las","label":"LAS","light":"#eda100","dark":"#c98500"},{"key":"clas","label":"CLAS","light":"#008300","dark":"#008300"},{"key":"corelas","label":"CoreLAS","light":"#4a3aa7","dark":"#9085e9"},{"key":"deprel","label":"deprel","light":"#e34948","dark":"#e66767"}];
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+const color = m => dark ? m.dark : m.light;
+const SVGNS = 'http://www.w3.org/2000/svg';
+let avg = 'macro';
+const off = new Set();
+
+const chart = document.getElementById('chart');
+const tip = document.getElementById('tip');
+
+const legend = document.getElementById('legend');
+METRICS.forEach(m => {
+  const el = document.createElement('span');
+  el.className = 'lg';
+  el.innerHTML = '<span class="sw" style="background:' + color(m) + '"></span>' + m.label;
+  el.addEventListener('click', () => {
+    if (off.has(m.key)) off.delete(m.key); else off.add(m.key);
+    el.dataset.off = off.has(m.key) ? '1' : '';
+    draw();
+  });
+  legend.appendChild(el);
+});
+
+document.querySelectorAll('#avgseg button').forEach(b => {
+  b.addEventListener('click', () => {
+    avg = b.dataset.avg;
+    document.querySelectorAll('#avgseg button').forEach(x =>
+      x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+    draw();
+  });
+});
+
+function draw() {
+  chart.innerHTML = '';
+  if (!H.length) { chart.innerHTML = '<div id="empty">No history recorded yet.</div>'; return; }
+
+  const W = 1000, HT = 460;
+  const P = { t: 16, r: 96, b: 64, l: 44 };
+  const iw = W - P.l - P.r, ih = HT - P.t - P.b;
+  const n = H.length;
+
+  const active = METRICS.filter(m => !off.has(m.key));
+  let vals = [];
+  for (const rec of H)
+    for (const m of active) {
+      const v = (rec[avg] || {})[m.key];
+      if (v != null) vals.push(v * 100);
+    }
+  if (!vals.length) { chart.innerHTML = '<div id="empty">No data for the selected series.</div>'; return; }
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  lo = Math.max(0, Math.floor(lo / 5) * 5 - 5);
+  hi = Math.min(100, Math.ceil(hi / 5) * 5 + 5);
+  if (hi === lo) hi = lo + 5;
+
+  const x = i => n === 1 ? P.l + iw / 2 : P.l + (iw * i) / (n - 1);
+  const y = v => P.t + ih * (1 - (v - lo) / (hi - lo));
+
+  const svg = document.createElementNS(SVGNS, 'svg');
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + HT);
+  svg.setAttribute('role', 'img');
+
+  // gridlines + y ticks
+  const gg = document.createElementNS(SVGNS, 'g'); gg.setAttribute('class', 'grid');
+  const ag = document.createElementNS(SVGNS, 'g'); ag.setAttribute('class', 'axis');
+  const step = (hi - lo) <= 20 ? 5 : 10;
+  for (let v = lo; v <= hi + 0.01; v += step) {
+    const yy = y(v);
+    const ln = document.createElementNS(SVGNS, 'line');
+    ln.setAttribute('x1', P.l); ln.setAttribute('x2', W - P.r);
+    ln.setAttribute('y1', yy); ln.setAttribute('y2', yy);
+    gg.appendChild(ln);
+    const tx = document.createElementNS(SVGNS, 'text');
+    tx.setAttribute('x', P.l - 8); tx.setAttribute('y', yy + 3.5);
+    tx.setAttribute('text-anchor', 'end'); tx.textContent = v + '%';
+    ag.appendChild(tx);
+  }
+  // x tick labels (commit / date), thinned to avoid collisions
+  const every = Math.ceil(n / 12);
+  H.forEach((rec, i) => {
+    if (i % every && i !== n - 1) return;
+    const tx = document.createElementNS(SVGNS, 'text');
+    tx.setAttribute('x', x(i)); tx.setAttribute('y', HT - P.b + 16);
+    tx.setAttribute('text-anchor', 'end');
+    tx.setAttribute('transform', 'rotate(-40 ' + x(i) + ' ' + (HT - P.b + 16) + ')');
+    tx.textContent = rec.commit || (rec.timestamp || '').slice(0, 10);
+    ag.appendChild(tx);
+  });
+  svg.appendChild(gg); svg.appendChild(ag);
+
+  // series
+  const endLabels = [];
+  for (const m of active) {
+    const pts = [];
+    H.forEach((rec, i) => {
+      const v = (rec[avg] || {})[m.key];
+      if (v != null) pts.push([i, v * 100]);
+    });
+    if (!pts.length) continue;
+    const c = color(m);
+    const path = document.createElementNS(SVGNS, 'path');
+    path.setAttribute('class', 'serie');
+    path.setAttribute('stroke', c);
+    path.setAttribute('d', pts.map((p, k) =>
+      (k ? 'L' : 'M') + x(p[0]) + ' ' + y(p[1])).join(' '));
+    svg.appendChild(path);
+    for (const p of pts) {
+      const dot = document.createElementNS(SVGNS, 'circle');
+      dot.setAttribute('class', 'dot'); dot.setAttribute('fill', c);
+      dot.setAttribute('cx', x(p[0])); dot.setAttribute('cy', y(p[1]));
+      dot.setAttribute('r', 3.5);
+      svg.appendChild(dot);
+    }
+    // collect direct end-label; positions are decluttered after the loop
+    const last = pts[pts.length - 1];
+    endLabels.push({ label: m.label, color: c, px: x(last[0]), py: y(last[1]), yc: y(last[1]) });
+  }
+
+  // spread overlapping end-labels apart vertically (min line height), then
+  // draw a thin leader from each data point to its nudged label.
+  const LH = 13, topB = P.t + 5, botB = P.t + ih - 2;
+  endLabels.sort((a, b) => a.yc - b.yc);
+  for (let i = 1; i < endLabels.length; i++)
+    if (endLabels[i].yc < endLabels[i - 1].yc + LH) endLabels[i].yc = endLabels[i - 1].yc + LH;
+  if (endLabels.length && endLabels[endLabels.length - 1].yc > botB) {
+    endLabels[endLabels.length - 1].yc = botB;
+    for (let i = endLabels.length - 2; i >= 0; i--)
+      if (endLabels[i].yc > endLabels[i + 1].yc - LH) endLabels[i].yc = endLabels[i + 1].yc - LH;
+  }
+  if (endLabels.length && endLabels[0].yc < topB) {
+    endLabels[0].yc = topB;
+    for (let i = 1; i < endLabels.length; i++)
+      if (endLabels[i].yc < endLabels[i - 1].yc + LH) endLabels[i].yc = endLabels[i - 1].yc + LH;
+  }
+  for (const e of endLabels) {
+    const lx = e.px + 8;
+    const ln = document.createElementNS(SVGNS, 'line');
+    ln.setAttribute('x1', e.px); ln.setAttribute('y1', e.py);
+    ln.setAttribute('x2', lx - 2); ln.setAttribute('y2', e.yc);
+    ln.setAttribute('stroke', e.color); ln.setAttribute('stroke-width', '1'); ln.setAttribute('opacity', '0.5');
+    svg.appendChild(ln);
+    const lab = document.createElementNS(SVGNS, 'text');
+    lab.setAttribute('class', 'endlab');
+    lab.setAttribute('x', lx); lab.setAttribute('y', e.yc + 3.5);
+    lab.textContent = e.label;
+    svg.appendChild(lab);
+  }
+
+  // hover crosshair + tooltip
+  const cross = document.createElementNS(SVGNS, 'line');
+  cross.setAttribute('class', 'crosshair');
+  cross.setAttribute('y1', P.t); cross.setAttribute('y2', P.t + ih);
+  cross.style.opacity = 0;
+  svg.appendChild(cross);
+
+  const hit = document.createElementNS(SVGNS, 'rect');
+  hit.setAttribute('x', P.l); hit.setAttribute('y', P.t);
+  hit.setAttribute('width', iw); hit.setAttribute('height', ih);
+  hit.setAttribute('fill', 'transparent');
+  svg.appendChild(hit);
+
+  function nearest(clientX) {
+    const r = svg.getBoundingClientRect();
+    const px = (clientX - r.left) / r.width * W;
+    let bi = 0, bd = Infinity;
+    for (let i = 0; i < n; i++) { const d = Math.abs(x(i) - px); if (d < bd) { bd = d; bi = i; } }
+    return bi;
+  }
+  function move(ev) {
+    const i = nearest(ev.clientX);
+    cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i));
+    cross.style.opacity = 1;
+    const rec = H[i];
+    let rows = '';
+    for (const m of active) {
+      const v = (rec[avg] || {})[m.key];
+      if (v == null) continue;
+      rows += '<div class="row"><span><span class="sw" style="background:' + color(m) +
+        '"></span>' + m.label + '</span><b>' + (v * 100).toFixed(2) + '%</b></div>';
+    }
+    const meta = (rec.commit || '?') + (rec.dirty ? '*' : '') + ' &middot; ' +
+      (rec.timestamp || '').slice(0, 10);
+    tip.innerHTML = '<div class="cm">' + meta + '</div>' + rows;
+    tip.style.opacity = 1;
+    tip.style.left = Math.min(ev.clientX + 14, innerWidth - 180) + 'px';
+    tip.style.top = (ev.clientY + 14) + 'px';
+  }
+  hit.addEventListener('mousemove', move);
+  hit.addEventListener('mouseleave', () => { cross.style.opacity = 0; tip.style.opacity = 0; });
+
+  chart.appendChild(svg);
+}
+draw();
+</script>
+</body>
+</html>
