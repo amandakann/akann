@@ -41,6 +41,7 @@ svg { display: block; width: 100%; height: auto; }
 .endlab { font-size: 11px; font-weight: 600; fill: var(--ink2); }
 .crosshair { stroke: var(--axis); stroke-width: 1; stroke-dasharray: 3 3; }
 #tip { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--axis); border-radius: 6px; padding: 6px 9px; font-size: 0.78em; box-shadow: 0 2px 8px rgba(0,0,0,0.18); opacity: 0; transition: opacity 0.08s; z-index: 5; font-variant-numeric: tabular-nums; }
+#tip .cmt { font-weight: 600; margin-bottom: 2px; }
 #tip .cm { color: var(--muted); font-family: monospace; margin-bottom: 3px; }
 #tip .row { display: flex; justify-content: space-between; gap: 12px; }
 #tip .sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
@@ -62,10 +63,11 @@ svg { display: block; width: 100%; height: auto; }
 </div>
 <div id="tip"></div>
 <script>
-const H = [{"timestamp":"2026-07-08T14:48:45+00:00","commit":"5a6a9c0","subject":"add macro/micro averages with history to eval","dirty":true,"n_treebanks":19,"total_tokens":250999,"macro":{"upos":0.5808399980699966,"uas":0.47536086331559446,"las":0.325455473326348,"clas":0.3292074845837202,"corelas":0.4745185369341972,"deprel":0.45890448065447553},"micro":{"upos":0.5614245475081574,"uas":0.4093123876987558,"las":0.26605285280021035,"clas":0.2776457229371688,"corelas":0.40980033277870215,"deprel":0.42900967732939177}},{"timestamp":"2026-07-08T15:57:06+00:00","commit":"bd2d1e1","subject":"add special case for single-word sentences to alignment.transfer_dependencies","dirty":true,"n_treebanks":19,"total_tokens":250996,"macro":{"upos":0.5684172333342039,"uas":0.46510165308532403,"las":0.31218262819248754,"clas":0.3131973019867094,"corelas":0.4563217043250835,"deprel":0.45414646772123257},"micro":{"upos":0.5605109244768841,"uas":0.4085921687995028,"las":0.2651675723915919,"clas":0.27641599418613455,"corelas":0.4075676395221139,"deprel":0.4287120113467944}},{"timestamp":"2026-07-08T16:11:46+00:00","commit":"bd2d1e1","subject":"add special case for single-word sentences to alignment.transfer_dependencies","dirty":true,"n_treebanks":19,"total_tokens":250999,"macro":{"upos":0.5809581106756961,"uas":0.47647227594506614,"las":0.32748328029081797,"clas":0.33098328542582617,"corelas":0.47750214032104593,"deprel":0.4598964023653337},"micro":{"upos":0.561432515667393,"uas":0.4096151777497121,"las":0.2666743692205945,"clas":0.27825132475397424,"corelas":0.4111314475873544,"deprel":0.4293124673803481}}];
+const H = [{"timestamp":"2026-07-08T14:48:45+00:00","commit":"5a6a9c0","subject":"add macro/micro averages with history to eval","dirty":true,"n_treebanks":19,"total_tokens":250999,"macro":{"upos":0.5808399980699966,"uas":0.47536086331559446,"las":0.325455473326348,"clas":0.3292074845837202,"corelas":0.4745185369341972,"deprel":0.45890448065447553},"micro":{"upos":0.5614245475081574,"uas":0.4093123876987558,"las":0.26605285280021035,"clas":0.2776457229371688,"corelas":0.40980033277870215,"deprel":0.42900967732939177}},{"timestamp":"2026-07-08T16:11:46+00:00","commit":"bd2d1e1","comment":"special case for single-word sents","subject":"add special case for single-word sentences to alignment.transfer_dependencies","dirty":true,"n_treebanks":19,"total_tokens":250999,"macro":{"upos":0.5809581106756961,"uas":0.47647227594506614,"las":0.32748328029081797,"clas":0.33098328542582617,"corelas":0.47750214032104593,"deprel":0.4598964023653337},"micro":{"upos":0.561432515667393,"uas":0.4096151777497121,"las":0.2666743692205945,"clas":0.27825132475397424,"corelas":0.4111314475873544,"deprel":0.4293124673803481}},{"timestamp":"2026-07-09T13:01:17+00:00","commit":"4633ed1","subject":"fix missing tl bug, backspace handling in aligngloss creation","dirty":true,"comment":"add 8 treebanks","n_treebanks":27,"total_tokens":317122,"macro":{"upos":0.5668851367078731,"uas":0.45519048965749026,"las":0.3033943196201421,"clas":0.3092749625946232,"corelas":0.44681214531055274,"deprel":0.4378219526019316},"micro":{"upos":0.5810602859467334,"uas":0.4168837229835836,"las":0.27754933432559076,"clas":0.2962595483724433,"corelas":0.4482540685732343,"deprel":0.44322059018295795}}];
 const METRICS = [{"key":"upos","label":"UPOS","light":"#2a78d6","dark":"#3987e5"},{"key":"uas","label":"UAS","light":"#1baf7a","dark":"#199e70"},{"key":"las","label":"LAS","light":"#eda100","dark":"#c98500"},{"key":"clas","label":"CLAS","light":"#008300","dark":"#008300"},{"key":"corelas","label":"CoreLAS","light":"#4a3aa7","dark":"#9085e9"},{"key":"deprel","label":"deprel","light":"#e34948","dark":"#e66767"}];
 const dark = matchMedia('(prefers-color-scheme: dark)').matches;
 const color = m => dark ? m.dark : m.light;
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const SVGNS = 'http://www.w3.org/2000/svg';
 let avg = 'macro';
 const off = new Set();
@@ -139,7 +141,8 @@ function draw() {
     tx.setAttribute('text-anchor', 'end'); tx.textContent = v + '%';
     ag.appendChild(tx);
   }
-  // x tick labels (commit / date), thinned to avoid collisions
+  // x tick labels (comment / commit / date), thinned to avoid collisions
+  const marker = rec => rec.comment || rec.commit || (rec.timestamp || '').slice(0, 10);
   const every = Math.ceil(n / 12);
   H.forEach((rec, i) => {
     if (i % every && i !== n - 1) return;
@@ -147,7 +150,7 @@ function draw() {
     tx.setAttribute('x', x(i)); tx.setAttribute('y', HT - P.b + 16);
     tx.setAttribute('text-anchor', 'end');
     tx.setAttribute('transform', 'rotate(-40 ' + x(i) + ' ' + (HT - P.b + 16) + ')');
-    tx.textContent = rec.commit || (rec.timestamp || '').slice(0, 10);
+    tx.textContent = marker(rec);
     ag.appendChild(tx);
   });
   svg.appendChild(gg); svg.appendChild(ag);
@@ -242,9 +245,12 @@ function draw() {
       rows += '<div class="row"><span><span class="sw" style="background:' + color(m) +
         '"></span>' + m.label + '</span><b>' + (v * 100).toFixed(2) + '%</b></div>';
     }
-    const meta = (rec.commit || '?') + (rec.dirty ? '*' : '') + ' &middot; ' +
+    const git = (rec.commit || '?') + (rec.dirty ? '*' : '') + ' &middot; ' +
       (rec.timestamp || '').slice(0, 10);
-    tip.innerHTML = '<div class="cm">' + meta + '</div>' + rows;
+    const meta = rec.comment
+      ? '<div class="cmt">' + esc(rec.comment) + '</div><div class="cm">' + git + '</div>'
+      : '<div class="cm">' + git + '</div>';
+    tip.innerHTML = meta + rows;
     tip.style.opacity = 1;
     tip.style.left = Math.min(ev.clientX + 14, innerWidth - 180) + 'px';
     tip.style.top = (ev.clientY + 14) + 'px';
