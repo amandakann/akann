@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cleaning inspection &mdash; language</title>
+<style>
+* { box-sizing: border-box; }
+:root {
+  --bg:#ffffff; --surface:#f4f7f9; --ink:#1b2733; --muted:#5c6b7a; --border:#d4dde4;
+  --accent:#2980b9; --hdr:#2c3e50; --hdr-ink:#ffffff; --hdr-link:#cfe3f2;
+  --gl-ink:#7d3c98; --clean:#27ae60; --flag:#e67e22;
+  --badge-bg:#fdecea; --badge-ink:#b03a2e; --chip-bg:#eaf2f8; --chip-on:#2980b9;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:#12171d; --surface:#1b222b; --ink:#e6edf3; --muted:#9fb0c0; --border:#2c3a47;
+    --accent:#5dade2; --hdr:#0f1620; --hdr-ink:#e6edf3; --hdr-link:#8fc6ec;
+    --gl-ink:#c39bd3; --clean:#2ecc71; --flag:#e8853b;
+    --badge-bg:#3b241f; --badge-ink:#f1a999; --chip-bg:#22303c; --chip-on:#2980b9;
+  }
+}
+html, body { background: var(--bg); color: var(--ink); }
+body { font-family: system-ui, sans-serif; margin: 0; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+#hdr { padding: 8px 16px; background: var(--hdr); color: var(--hdr-ink);
+       display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+#hdr h1 { margin: 0; font-size: 1.1em; }
+#hdr a { color: var(--hdr-link); font-size: 0.85em; }
+#hdr .sub { font-size: 0.8em; opacity: 0.8; margin-left: auto; }
+main { padding: 12px 16px; }
+.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 10px 0; }
+input[type=search] {
+  padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg); color: var(--ink); font-size: 0.95em; min-width: 260px;
+}
+.count { color: var(--muted); font-size: 0.85em; }
+button.more, .tab, .chip {
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+  padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.9em;
+}
+.tabs { display: flex; gap: 8px; margin: 8px 0; }
+.tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+.chip { border-radius: 14px; font-size: 0.8em; }
+.chip.active { background: var(--chip-on); color: #fff; border-color: var(--chip-on); }
+
+table { border-collapse: collapse; font-size: 0.9em; width: 100%; }
+th { background: var(--surface); padding: 6px 12px; border: 1px solid var(--border);
+     text-align: left; cursor: pointer; user-select: none; white-space: nowrap; position: sticky; top: 0; }
+th::after { content: '\2003'; opacity: 0.35; }
+th[data-sort="asc"]::after { content: ' \25B2'; opacity: 1; }
+th[data-sort="desc"]::after { content: ' \25BC'; opacity: 1; }
+td { padding: 5px 12px; border: 1px solid var(--border); }
+tr:hover td { background: var(--surface); }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+tfoot td { font-weight: bold; border-top: 2px solid var(--border); background: var(--surface); }
+td.pct { white-space: nowrap; }
+.bar { display: inline-block; width: 64px; height: 8px; background: var(--border);
+       border-radius: 4px; overflow: hidden; vertical-align: middle; margin-right: 6px; }
+.bar span { display: block; height: 100%; background: var(--clean); }
+.pctnum { font-variant-numeric: tabular-nums; }
+
+.ex { border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px;
+      margin: 8px 0; background: var(--surface); scroll-margin-top: 12px; }
+.ex.flagged { border-left: 3px solid var(--flag); }
+.ex.target { outline: 2px solid var(--accent); }
+.exhead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+          font-size: 0.8em; color: var(--muted); margin-bottom: 2px; }
+.exid { font-family: ui-monospace, monospace; }
+.badge { background: var(--badge-bg); color: var(--badge-ink); padding: 1px 7px;
+         border-radius: 10px; font-size: 0.95em; }
+.langnote { background: var(--chip-bg); color: var(--ink); padding: 1px 7px;
+            border-radius: 10px; font-size: 0.95em; font-style: italic; }
+.igt { margin: 4px 0; }
+.igt .tx { font-weight: 600; font-style: italic; }
+.igt .morphs { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 4px 0; }
+.mcol { display: flex; flex-direction: column; }
+.mcol .seg { font-style: italic; }
+.mcol .gl { color: var(--gl-ink); font-size: 0.85em; white-space: nowrap; }
+.igt .tl { color: var(--muted); }
+.cleanlog { font-size: 0.8em; color: var(--muted); margin-top: 4px; }
+details.before { margin-top: 6px; }
+details.before summary { cursor: pointer; color: var(--accent); font-size: 0.8em; }
+.empty, .loading, .error { color: var(--muted); padding: 20px 0; }
+.error { color: var(--flag); }
+</style>
+</head>
+<body>
+<div id="hdr"><h1 id="title">Language</h1>
+<a href="index.html">&larr; All languages</a><a href="flags.html">Flag types &rarr;</a>
+<span class="sub" id="sub"></span></div>
+<main>
+<div class="tabs">
+  <button class="tab active" data-tab="clean" id="tab-clean">Clean</button>
+  <button class="tab" data-tab="flagged" id="tab-flagged">Flagged</button>
+</div>
+<div class="toolbar">
+  <input type="search" id="search" placeholder="Search examples">
+  <span class="count" id="count"></span>
+</div>
+<div class="chips" id="chips"></div>
+<div id="list"><div class="loading">Loading…</div></div>
+</main>
+<script>
+
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,
+  function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+function igt(ex){
+  var n = Math.max(ex.sg ? ex.sg.length : 0, ex.gl ? ex.gl.length : 0);
+  var cols = '';
+  for (var i = 0; i < n; i++){
+    // Keep empty slots visible so an empty segmentation cell does not let its gloss rise
+    // onto the segmentation line.
+    var seg = esc(ex.sg && ex.sg[i]) || '\u00A0';
+    var gl = esc(ex.gl && ex.gl[i]) || '\u00A0';
+    cols += '<div class="mcol"><span class="seg">' + seg +
+            '</span><span class="gl">' + gl + '</span></div>';
+  }
+  return '<div class="igt"><div class="tx">' + esc(ex.tx) + '</div>' +
+         '<div class="morphs">' + cols + '</div>' +
+         '<div class="tl">' + esc(ex.tl) + '</div></div>';
+}
+
+function exampleCard(ex, opts){
+  opts = opts || {};
+  var anchor = ex.anchor || '';
+  // On the language page the id links to itself (#anchor); on the flag pages it (and the
+  // language name) deep-link into the owning language page.
+  var idHref = opts.showLang
+    ? 'language.html?lang=' + encodeURIComponent(ex.lang) + (anchor ? '#' + anchor : '')
+    : '#' + anchor;
+  var head = '<div class="exhead"><a class="exid" href="' + idHref + '">' + esc(ex.id) + '</a>';
+  if (opts.showLang && ex.langname){
+    head += ' <a class="exlang" href="' + idHref + '">' + esc(ex.langname) + '</a>';
+  }
+  if (ex.note){
+    head += ' <span class="langnote">' + esc(ex.note) + '</span>';
+  }
+  if (ex.flags){
+    for (var i = 0; i < ex.flags.length; i++){
+      head += ' <span class="badge">' + esc(ex.flags[i]) + '</span>';
+    }
+  }
+  head += '</div>';
+  var body = igt(ex);
+  if (ex.clean_log) body += '<div class="cleanlog">' + esc(ex.clean_log) + '</div>';
+  if (ex.orig){
+    body += '<details class="before"><summary>original (before cleaning)</summary>' +
+            igt(ex.orig) + '</details>';
+  }
+  return '<div class="ex' + (opts.flagged ? ' flagged' : '') + '"' +
+         (anchor ? ' id="' + anchor + '"' : '') + '>' + head + body + '</div>';
+}
+
+function haystack(ex){
+  return (ex.id + ' ' + ex.tx + ' ' + (ex.sg||[]).join(' ') + ' ' +
+          (ex.gl||[]).join(' ') + ' ' + ex.tl + ' ' + (ex.flags||[]).join(' ') + ' ' +
+          (ex.note||'')).toLowerCase();
+}
+
+// Incrementally render a filtered list into `mount`, in batches, with a "Load more" button.
+function makeRenderer(mount, batch){
+  batch = batch || 200;
+  return function(list, render, emptyMsg, ensureId){
+    mount.innerHTML = '';
+    if (!list.length){ mount.innerHTML = '<div class="empty">' + (emptyMsg||'No matches.') + '</div>'; return; }
+    var shown = 0;
+    var box = document.createElement('div');
+    mount.appendChild(box);
+    var moreBtn = document.createElement('button');
+    moreBtn.className = 'more';
+    function draw(){
+      var next = Math.min(shown + batch, list.length);
+      var html = '';
+      for (var i = shown; i < next; i++) html += render(list[i]);
+      box.insertAdjacentHTML('beforeend', html);
+      shown = next;
+      if (shown < list.length){ moreBtn.textContent = 'Load more (' + (list.length - shown) + ' left)'; }
+      else if (moreBtn.parentNode){ moreBtn.remove(); }
+    }
+    moreBtn.addEventListener('click', draw);
+    mount.appendChild(moreBtn);
+    draw();
+    // For a deep link, keep drawing batches until the target card exists, then reveal it.
+    if (ensureId){
+      while (!document.getElementById(ensureId) && shown < list.length) draw();
+      var el = document.getElementById(ensureId);
+      if (el){ el.scrollIntoView({ block: 'center' }); el.classList.add('target'); }
+    }
+  };
+}
+
+function debounce(fn, ms){
+  var t; return function(){ var a = arguments, self = this;
+    clearTimeout(t); t = setTimeout(function(){ fn.apply(self, a); }, ms || 150); };
+}
+
+function getParam(name){
+  return new URLSearchParams(location.search).get(name);
+}
+
+
+var DATA = null, TAB = 'clean', FLAG = null, QUERY = '';
+var HAY = { clean: [], flagged: [] };
+var render = makeRenderer(document.getElementById('list'));
+
+var lang = getParam('lang');
+if (!lang){
+  document.getElementById('list').innerHTML = '<div class="error">No ?lang= given.</div>';
+} else {
+  fetch('data/lang/' + encodeURIComponent(lang) + '.json')
+    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+    .then(init)
+    .catch(function(e){
+      document.getElementById('list').innerHTML = '<div class="error">Failed to load ' + esc(lang) + ': ' + e + '</div>';
+    });
+}
+
+function init(data){
+  DATA = data;
+  document.getElementById('title').textContent = data.name || data.id;
+  document.getElementById('sub').textContent =
+    data.family + ' · ' + data.id + ' · ' + data.clean.length + ' clean / ' + data.flagged.length + ' flagged';
+  HAY.clean = data.clean.map(haystack);
+  HAY.flagged = data.flagged.map(haystack);
+  document.getElementById('tab-clean').textContent = 'Clean (' + data.clean.length + ')';
+  document.getElementById('tab-flagged').textContent = 'Flagged (' + data.flagged.length + ')';
+
+  document.querySelectorAll('.tab').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      TAB = btn.dataset.tab; FLAG = null;
+      syncTabs();
+      buildChips();
+      update();
+    });
+  });
+  document.getElementById('search').addEventListener('input', debounce(function(e){
+    QUERY = e.target.value.trim().toLowerCase(); update();
+  }, 130));
+
+  // Deep link (#<example-id>): find which tab owns that anchor, open it, and scroll there.
+  var hash = decodeURIComponent(location.hash.slice(1)), target = null;
+  if (hash){
+    if (DATA.flagged.some(function(e){ return e.anchor === hash; })){ TAB = 'flagged'; target = hash; }
+    else if (DATA.clean.some(function(e){ return e.anchor === hash; })){ TAB = 'clean'; target = hash; }
+  }
+  syncTabs();
+  buildChips();
+  update(target);
+}
+
+function syncTabs(){
+  document.querySelectorAll('.tab').forEach(function(b){
+    b.classList.toggle('active', b.dataset.tab === TAB);
+  });
+}
+
+function buildChips(){
+  var wrap = document.getElementById('chips');
+  if (TAB !== 'flagged'){ wrap.innerHTML = ''; return; }
+  var types = {};
+  DATA.flagged.forEach(function(ex){ (ex.ftypes||[]).forEach(function(t){ types[t] = (types[t]||0)+1; }); });
+  var keys = Object.keys(types).sort(function(a,b){ return types[b]-types[a]; });
+  var html = '<button class="chip' + (FLAG===null?' active':'') + '" data-flag="">All</button>';
+  keys.forEach(function(t){
+    html += '<button class="chip' + (FLAG===t?' active':'') + '" data-flag="' + esc(t) + '">' +
+            esc(t) + ' (' + types[t] + ')</button>';
+  });
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.chip').forEach(function(c){
+    c.addEventListener('click', function(){
+      FLAG = c.dataset.flag || null;
+      wrap.querySelectorAll('.chip').forEach(function(x){ x.classList.remove('active'); });
+      c.classList.add('active');
+      update();
+    });
+  });
+}
+
+function update(ensureId){
+  var items = DATA[TAB], hay = HAY[TAB];
+  var flagged = (TAB === 'flagged');
+  var filtered = [];
+  for (var i = 0; i < items.length; i++){
+    if (QUERY && hay[i].indexOf(QUERY) < 0) continue;
+    if (FLAG && (items[i].ftypes || []).indexOf(FLAG) < 0) continue;
+    filtered.push(items[i]);
+  }
+  document.getElementById('count').textContent =
+    filtered.length + ' of ' + items.length + ' shown';
+  render(filtered, function(ex){ return exampleCard(ex, { flagged: flagged }); },
+         'No matching ' + TAB + ' examples.', ensureId);
+}
+</script>
+</body>
+</html>
