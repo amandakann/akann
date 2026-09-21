@@ -80,6 +80,12 @@ td.pct { white-space: nowrap; }
 .mcol .seg { font-style: italic; }
 .mcol .gl { color: var(--gl-ink); font-size: 0.85em; white-space: nowrap; }
 .igt .tl { color: var(--muted); }
+/* "Table view": box each morpheme with gridlines so word boundaries read clearly. */
+body.tblview .igt .morphs { gap: 4px; }
+body.tblview .mcol { border: 1px solid var(--border); border-radius: 3px; padding: 1px 7px; }
+body.tblview .mcol .gl { border-top: 1px solid var(--border); margin-top: 2px; padding-top: 2px; }
+.toggle { display: inline-flex; align-items: center; gap: 5px; font-size: 0.85em;
+          color: var(--muted); cursor: pointer; user-select: none; white-space: nowrap; }
 .cleanlog { font-size: 0.8em; color: var(--muted); margin-top: 4px; }
 details.before { margin-top: 6px; }
 details.before summary { cursor: pointer; color: var(--accent); font-size: 0.8em; }
@@ -99,6 +105,7 @@ details.before summary { cursor: pointer; color: var(--accent); font-size: 0.8em
 <div class="toolbar">
   <input type="search" id="search" placeholder="Search examples">
   <span class="count" id="count"></span>
+  <label class="toggle"><input type="checkbox" id="tblToggle"> Table view</label>
 </div>
 <div class="chips" id="chips"></div>
 <div id="list"><div class="loading">Loading…</div></div>
@@ -202,6 +209,21 @@ function getParam(name){
   return new URLSearchParams(location.search).get(name);
 }
 
+// Interlinear "table view" toggle: a body class (CSS does the styling) remembered across
+// pages. Applies the saved preference immediately and wires the checkbox if present.
+function initIgtToggle(cb){
+  var on = false;
+  try { on = localStorage.getItem('igtTable') === '1'; } catch (e) {}
+  document.body.classList.toggle('tblview', on);
+  if (cb){
+    cb.checked = on;
+    cb.addEventListener('change', function(){
+      document.body.classList.toggle('tblview', cb.checked);
+      try { localStorage.setItem('igtTable', cb.checked ? '1' : '0'); } catch (e) {}
+    });
+  }
+}
+
 
 var DATA = null, TAB = 'clean', FLAG = null, QUERY = '';
 var HAY = { clean: [], flagged: [] };
@@ -240,6 +262,7 @@ function init(data){
   document.getElementById('search').addEventListener('input', debounce(function(e){
     QUERY = e.target.value.trim().toLowerCase(); update();
   }, 130));
+  initIgtToggle(document.getElementById('tblToggle'));
 
   // Deep link (#<example-id>): find which tab owns that anchor, open it, and scroll there.
   var hash = decodeURIComponent(location.hash.slice(1)), target = null;
