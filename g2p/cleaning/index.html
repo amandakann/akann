@@ -79,6 +79,11 @@ td.pct { white-space: nowrap; }
 .mcol { display: flex; flex-direction: column; }
 .mcol .seg { font-style: italic; }
 .mcol .gl { color: var(--gl-ink); font-size: 0.85em; white-space: nowrap; }
+/* Empty slots: the cleaner's %%EMPTY%% sentinel and the corpus's own '_'.
+   Both mean "nothing here", so they render as a dimmed symbol rather than
+   literal text, which otherwise dominates a row of short glosses. */
+.mcol .blank { color: var(--muted); opacity: 0.5; font-style: normal;
+               font-weight: 400; letter-spacing: 0.05em; }
 .igt .tl { color: var(--muted); }
 /* "Table view": box each morpheme with gridlines so word boundaries read clearly. */
 body.tblview .igt .morphs { gap: 4px; }
@@ -108,16 +113,29 @@ details.before summary { cursor: pointer; color: var(--accent); font-size: 0.8em
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,
   function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 
+// An empty slot: the cleaner's %%EMPTY%% sentinel, or the corpus's own '_'.
+// Rendered as a dimmed symbol with the real value on hover, so a row of short
+// glosses is not swamped by the literal text.
+function slotHtml(v, cls){
+  if (v === '%%EMPTY%%' || v === '_'){
+    var why = (v === '%%EMPTY%%') ? 'empty slot (filled by the cleaner)'
+                                  : "empty slot ('_' in the source)";
+    return '<span class="' + cls + ' blank" title="' + why + '">\u2205</span>';
+  }
+  return '<span class="' + cls + '">' + (esc(v) || '\u00A0') + '</span>';
+}
+
 function igt(ex){
   var n = Math.max(ex.sg ? ex.sg.length : 0, ex.gl ? ex.gl.length : 0);
   var cols = '';
   for (var i = 0; i < n; i++){
     // Keep empty slots visible so an empty segmentation cell does not let its gloss rise
     // onto the segmentation line.
-    var seg = esc(ex.sg && ex.sg[i]) || '\u00A0';
-    var gl = esc(ex.gl && ex.gl[i]) || '\u00A0';
-    cols += '<div class="mcol"><span class="seg">' + seg +
-            '</span><span class="gl">' + gl + '</span></div>';
+    var sv = (ex.sg && ex.sg[i] != null) ? ex.sg[i] : '';
+    var gv = (ex.gl && ex.gl[i] != null) ? ex.gl[i] : '';
+    // A slot blank on BOTH sides cannot occur: drop-padding-slots removes
+    // mirrored blanks, so only one side is ever empty here.
+    cols += '<div class="mcol">' + slotHtml(sv, 'seg') + slotHtml(gv, 'gl') + '</div>';
   }
   return '<div class="igt"><div class="tx">' + esc(ex.tx) + '</div>' +
          '<div class="morphs">' + cols + '</div>' +
