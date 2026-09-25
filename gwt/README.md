@@ -47,10 +47,26 @@ reproduces `morpheme_summary.csv` exactly.
   from every gloss-accuracy figure — a model's gloss for them is neither right
   nor wrong. Segmentation is still scored for them. This makes gloss accuracy
   here slightly higher than in `morpheme_summary.csv`, which counted them.
+- **Morpheme error rate / segmentation F1** are polygloss's metrics
+  (`polygloss/src/evaluation/evaluate.py`, reimplemented in `polygloss_metrics.py`):
+  per-sentence, macro-averaged, so they can't be faceted by morpheme type or
+  vocabulary. MER skips gold UNK morphemes as the current `evaluate.py` does; the
+  values logged to WandB were computed before that change (they match this code
+  with UNK kept), so they are a few points higher. Segmentation F1 matches WandB.
 - **Lexical vs grammatical** (binary): a gloss is *lexical* if any `.`-separated
   component has a lowercase letter or is exactly `I`; else *grammatical*.
 - **In-vocab**: a form+gloss is in-vocab for a model if it appears in any of that
-  model's training texts (base is always OOV).
+  model's training texts (base is always OOV). Training texts per speaker: Gul Muhammad
+  `20160110-GulMuhammadFolkTale`, Din Muhammad `20151225-DinMuhammadFolkTale` (not
+  `20151215-DinMouhdFolkTals`, which no model was trained on), Abdul Jalil
+  `20230827-AbdulJalilTellingFolkTale`.
+- **Baseline** (`baseline-<size>`, shown as condition `baseline`, dashed grey): for
+  each test word, the most frequent segmentation+gloss of that surface word in the
+  size's training texts (ties: first seen); an unseen word is predicted as one
+  unsegmented morpheme with the most frequent monomorphemic word gloss (`PTCL` for
+  every size). It ignores translations, so it's the same in every eval. Built from
+  `gawarbati_metalangs/*.csv` by `build_site.py`, which checks that the same reader
+  reproduces every gold test reference.
 - **Sentences tab** shows each model's *full* predicted segmentation, so
   over/under-segmentation is visible; morphemes are colored against the gold
   alignment (correct gloss / wrong gloss / seg-miss-or-extra / UNK).
