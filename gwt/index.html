@@ -40,6 +40,17 @@ header.top{background:var(--surface);border-bottom:1px solid var(--border);
 .controls{background:var(--surface);border:1px solid var(--border);border-radius:10px;
   padding:12px;margin:14px 0;display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
 .cgroup{display:flex;flex-direction:column;gap:6px;min-width:0}
+/* wide screens: aligned columns (training/size, test/sort), legend right of sort */
+@media(min-width:1000px){
+  .controls{display:grid;grid-template-columns:max-content max-content max-content;column-gap:28px;row-gap:14px}
+  .cg-train{grid-area:1 / 1}
+  .cg-test{grid-area:1 / 2 / 2 / 4}
+  .cg-size{grid-area:2 / 1}
+  .cg-sort{grid-area:2 / 2}
+  .cg-legend{grid-area:2 / 3}
+  .cg-legend .legend{display:grid;grid-template-rows:repeat(2,auto);grid-auto-flow:column;
+    grid-auto-columns:max-content;gap:4px 14px}
+}
 .clabel{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{border:1px solid var(--border);background:var(--chip);color:var(--ink2);

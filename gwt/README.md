@@ -21,7 +21,7 @@ python build_site.py --eval notl     # just one eval
 python build_site.py --offline       # rebuild from cache only, no WandB call
 ```
 
-Six evaluations, switched with the "Test-time translation" buttons (or `?eval=<key>`):
+Six evaluations, switched with the "Translation condition (test)" buttons (or `?eval=<key>`):
 
 | key | WandB project | test-time translation | writes |
 |---|---|---|---|
