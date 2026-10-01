@@ -1,8 +1,19 @@
 # Glossing-model comparison site
 
 Static, server-free site for manually comparing the Gawar-Bati glossing models
-(7 LoRA sizes × 5 translation conditions + un-finetuned base = 40 runs) on the
-Jawarya/MeraKhan test set.
+(7 LoRA sizes × 5 translation conditions + un-finetuned base = 40 runs) on five
+evaluation texts from two test sets:
+
+| set | texts | WandB projects |
+|---|---|---|
+| `test` | Jawarya, Mera Khan | `gwt-gtr`, `gwt-notl`; base model `gwt-metalang` |
+| `dev` | Din Mouhd, Abdul Manan 1, Abdul Manan 2 | `gwt-dev` (base model included) |
+
+Both sets were run with the same LoRA adapters, so each run's predictions on the two
+sets are concatenated. The "Evaluation texts" switches turn texts on and off (`test` /
+`dev` / `all` select a whole set); every figure on the page — metrics, per-form
+accuracies, homophones, counts — is recomputed in the browser over the texts that are
+on. With one set selected the numbers are identical to scoring that set alone.
 
 ## Open it
 
@@ -17,23 +28,32 @@ Just open `index.html` in a browser — no server needed (`data.js` loads via a
 ```
 cd gawarbati_qual-eval
 python build_site.py                 # build every eval (tables cached in _site_cache/)
-python build_site.py --eval notl     # just one eval
+python build_site.py --eval gls_ur   # just one eval
 python build_site.py --offline       # rebuild from cache only, no WandB call
 ```
+
+Dev-set tables are cached in `_site_cache/dev/`. A run is dropped (with a message) unless
+it exists in both test sets. Sentence ids in the run tables are the metalang CSV ids
+without `[]` (`AbdulMananTellingFolkTale1_8`).
+
+The data files are compacted to roughly a fifth of their plain size (≈4–5 MB each);
+`app.js` expands them on load. The encoding is documented next to `WRONG_CODES` in
+`build_site.py`.
 
 Six evaluations, switched with the "Translation condition (test)" buttons (or `?eval=<key>`):
 
 | key | WandB project | test-time translation | writes |
 |---|---|---|---|
 | `matched` | the diagonal of the rows below | the LoRA's own training condition | `site/data.js` |
-| `gls_en`, `gls_ur`, `gtr_en`, `lit_en` | `gwt-gtr` | that condition, for every LoRA | `site/data_<cond>.js` |
-| `no_translation` | `gwt-notl` | none, for every LoRA | `site/data_no_translation.js` |
+| `gls_en`, `gls_ur`, `gtr_en`, `lit_en` | `gwt-gtr` + `gwt-dev` | that condition, for every LoRA | `site/data_<cond>.js` |
+| `no_translation` | `gwt-notl` + `gwt-dev` | none, for every LoRA | `site/data_no_translation.js` |
 
 In the per-condition evals the condition axis is the condition the LoRA was *trained*
 with; size, training and test condition are read from each run's config
 (`local_dataset_path`, `adapter_dir`, `translation_condition`). The base model's run
-for each test condition comes from `gwt-metalang`; that project's LoRA runs are an
-older checkpoint and aren't used.
+for each test condition comes from `gwt-metalang` (test set; that project's LoRA runs
+are an older checkpoint and aren't used) and from `gwt-dev` (dev set: the runs with
+no `adapter_dir`).
 Runs that haven't finished are skipped and not cached, so re-run the build once
 they're done.
 
@@ -43,14 +63,16 @@ reproduces `morpheme_summary.csv` exactly.
 
 ## Notes on the numbers
 
-- **UNK gold glosses** (45 morphemes whose gold gloss is unknown) are excluded
+- **UNK gold glosses** (110 morphemes whose gold gloss is unknown: 45 in `test`,
+  65 in `dev`) are excluded
   from every gloss-accuracy figure — a model's gloss for them is neither right
   nor wrong. Segmentation is still scored for them. This makes gloss accuracy
   here slightly higher than in `morpheme_summary.csv`, which counted them.
 - **Morpheme error rate / segmentation F1** are polygloss's metrics
   (`polygloss/src/evaluation/evaluate.py`, reimplemented in `polygloss_metrics.py`):
   per-sentence, macro-averaged, so they can't be faceted by morpheme type or
-  vocabulary. MER skips gold UNK morphemes as the current `evaluate.py` does; the
+  vocabulary. The build stores each sentence's value per run (5 decimals) and the
+  page averages over the shown sentences. MER skips gold UNK morphemes as the current `evaluate.py` does; the
   values logged to WandB were computed before that change (they match this code
   with UNK kept), so they are a few points higher. Segmentation F1 matches WandB.
 - **Lexical vs grammatical** (binary): a gloss is *lexical* if any `.`-separated
