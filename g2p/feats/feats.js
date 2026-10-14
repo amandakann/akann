@@ -442,11 +442,11 @@ function indexPage() {
 
   const conflicts = {};
   names.forEach(n => Object.entries(((RS[n].problems || {}).conflict) || {}).forEach(([k, v]) => {
-    const f = k.split('=')[0];
-    const a = conflicts[f] = conflicts[f] || { f, words: 0, by: {}, combos: {}, layers: {} };
+    const [f, vals] = k.split('=');
+    const a = conflicts[k] = conflicts[k] || { k, f, vals, words: 0, by: {}, glosses: {}, layers: {} };
     a.words += v.count;
     a.by[n] = (a.by[n] || 0) + v.count;
-    a.combos[k] = (a.combos[k] || 0) + v.count;
+    Object.entries(v.raw || {}).forEach(([g, c]) => { a.glosses[g] = (a.glosses[g] || 0) + c; });
     Object.entries(v.gold_layers || {}).forEach(([p, c]) => { a.layers[p] = (a.layers[p] || 0) + c; });
   }));
 
@@ -469,7 +469,7 @@ function indexPage() {
       '<h2>Issues</h2><div class="tiles">' +
       '<div class="tile click" data-goto="unmapped"><div class="v">' + unN + '</div><div class="k">unmapped label occurrences (' + Object.keys(unmapped).length + ' distinct)</div></div>' +
       '<div class="tile click" data-goto="lowagree"><div class="v">' + lowN + '</div><div class="k">mapped labels that rarely agree with gold</div></div>' +
-      '<div class="tile click" data-goto="conflicts"><div class="v">' + confN + '</div><div class="k">words with conflicting labels (' + Object.keys(conflicts).length + ' features)</div></div></div>';
+      '<div class="tile click" data-goto="conflicts"><div class="v">' + confN + '</div><div class="k">words with conflicting labels (' + Object.keys(conflicts).length + ' value combinations)</div></div></div>';
 
     const rows = names.map(n => {
       const R = RS[n], m = R.meta_summary, s = R.support, g = m.has_gold_feats;
@@ -481,8 +481,10 @@ function indexPage() {
       const sc = k => '<td class="num">' + (g ? pct(R[k]) : 'n/a') + '</td>';
       return '<tr><td><a href="' + n + '.html">' + esc(n) + '</a></td><td>' + esc(m.treebank) + '</td>' +
         '<td class="num">' + m.aligned_sentences + '/' + m.total_sentences + '</td><td class="num">' + m.aligned_tokens + '</td>' +
-        '<td class="num">' + m.labelled_tokens + '</td><td class="num">' + m.labels + '</td><td class="num">' + pct(R.label_mapped) + '</td>' +
-        '<td style="min-width:180px">' + stack + '</td>' + ['precision', 'recall', 'f1', 'r_f1', 'exact', 'exact_labelled'].map(sc).join('') + '</tr>';
+        '<td class="num">' + pct(m.aligned_tokens ? m.labelled_tokens / m.aligned_tokens : null) + '</td>' +
+        '<td class="num">' + pct(m.aligned_tokens && m.gold_feat_tokens != null ? m.gold_feat_tokens / m.aligned_tokens : null) + '</td>' +
+        '<td class="num">' + pct(m.aligned_tokens && m.pred_feat_tokens != null ? m.pred_feat_tokens / m.aligned_tokens : null) + '</td>' +
+        '<td style="min-width:180px">' + stack + '</td><td class="num">' + pct(R.label_mapped) + '</td>' + ['precision', 'recall', 'f1', 'r_f1', 'exact', 'exact_labelled'].map(sc).join('') + '</tr>';
     });
     // micro averages over gold treebanks
     const t = { tp: 0, fp: 0, fn: 0, rtp: 0, rfp: 0, rfn: 0, ex: 0, tok: 0, exl: 0, lab: 0 };
@@ -494,13 +496,16 @@ function indexPage() {
     const prf = (a, b, c) => { const P = a + b ? a / (a + b) : null, Rc = a + c ? a / (a + c) : null; return [P, Rc, P && Rc ? 2 * P * Rc / (P + Rc) : null]; };
     const [mp, mr, mf] = prf(t.tp, t.fp, t.fn), rf = prf(t.rtp, t.rfp, t.rfn)[2];
     const foot = '<tfoot><tr><td>micro avg</td><td class="note">scores: gold treebanks only</td><td></td><td class="num">' + toks +
-      '</td><td></td><td class="num">' + labs + '</td><td class="num">' + pct(labs ? mappedN / labs : null) + '</td><td></td>' +
+      '</td><td class="num">' + pct(toks ? names.reduce((x, n) => x + RS[n].meta_summary.labelled_tokens, 0) / toks : null) + '</td>' + ['gold_feat_tokens', 'pred_feat_tokens'].map(k =>
+        '<td class="num">' + pct(toks ? names.reduce((x, n) => x + (RS[n].meta_summary[k] || 0), 0) / toks : null) + '</td>').join('') +
+      '<td></td><td class="num">' + pct(labs ? mappedN / labs : null) + '</td>' +
       [mp, mr, mf, rf, t.tok ? t.ex / t.tok : null, t.lab ? t.exl / t.lab : null].map(v => '<td class="num">' + pct(v) + '</td>').join('') + '</tr></tfoot>';
     const heads = [['name', '', 'Mapped corpus; links to its page'], ['treebank', '', 'Gold treebank'],
       ['sents', 'num', 'Evaluated sentences / total in gold'], ['tokens', 'num', 'Evaluated tokens'],
-      ['glossed', 'num', 'Tokens with at least one gloss label'], ['labels', 'num', 'Gloss label occurrences'],
-      ['mapped', 'num', 'Share of gloss labels that reached a UD feature'],
+      ['glossed', 'num', 'Share of tokens with at least one gloss label'],
+      ['gold feats', 'num', 'Share of tokens with any FEATS in gold'], ['pred feats', 'num', 'Share of tokens with any predicted FEATS'],
       ['label stages', '', 'How the treebank\'s gloss labels split across mapping stages'],
+      ['mapped', 'num', 'Share of gloss labels that reached a UD feature'],
       ['P', 'num', 'Precision of Feat=Val pairs'], ['R', 'num', 'Recall of Feat=Val pairs'], ['F1', 'num', 'F1 of Feat=Val pairs'],
       ['rF1', 'num', 'F1 restricted to features the gloss-to-UM map can produce'],
       ['exact', 'num', 'Tokens whose FEATS match gold exactly'], ['exact (glossed)', 'num', 'Exact match among tokens with gloss labels']];
@@ -557,7 +562,7 @@ function indexPage() {
         ['pairs', 'num', 'Feat=Val pairs it produced, gold treebanks'],
         ['agree', 'num', 'Share of produced pairs found in gold FEATS'],
         ['lost', 'num', 'Produced pairs not in gold (pairs × (1 − agree)): the most to gain at the top'],
-        ['what gold has instead', '', 'Gold counterpart of lost pairs: layered feature, other value, same value elsewhere, or other gold pairs on the word (∅ = none). Click for examples'],
+        ['other gold labels', '', 'Gold counterpart of lost pairs: layered feature, other value, same value elsewhere, or other gold pairs on the word (∅ = none). Click for examples'],
         ['per treebank', '', 'Agreement per treebank; click for examples'],
       ], rows) + '</div>';
   }
@@ -590,10 +595,11 @@ function indexPage() {
   function conflictsTab() {
     const rowsA = Object.values(conflicts).sort((a, b) => b.words - a.words).map(a => {
       const goldTotal = sum(a.layers);
-      return '<tr><td class="mono">' + esc(a.f) + '</td><td class="num">' + a.words + '</td><td class="num">' + Object.keys(a.by).length + '</td>' +
-        '<td class="note">' + where(a.by, { tab: 'problems', stage: 'conflict' }) + '</td>' +
+      return '<tr><td class="mono">' + esc(a.f) + '</td><td class="mono">' + esc(a.vals) + '</td><td class="num">' + a.words + '</td>' +
+        '<td class="num">' + Object.keys(a.by).length + '</td>' +
+        '<td class="note">' + where(a.by, { tab: 'problems', stage: 'conflict', ex: 'problem|conflict|' + a.k }) + '</td>' +
         '<td>' + (goldTotal ? topList(a.layers, goldTotal, 3) : '<span class="desc">no gold</span>') + '</td>' +
-        '<td>' + topList(a.combos, 0, 3) + '</td></tr>';
+        '<td>' + topList(a.glosses, 0, 2) + '</td></tr>';
     });
     const rowsB = goldNames.map(n => {
       const lm = (RS[n].disagreements || {}).layer_mismatch || {}, fp = RS[n].support.pairs.fp;
@@ -606,12 +612,13 @@ function indexPage() {
         Object.entries(byLayer).sort((x, y) => y[1] - x[1]).map(([g, c]) => fc(esc(g) + ' ' + c)).join('') + '</td></tr>';
     }).filter(Boolean);
     return '<h2>Conflicting labels</h2>' + table([
-        ['feature', '', 'UD feature that two labels on one word gave different values for'],
-        ['words', 'num', 'Words with the conflict, all treebanks'],
+        ['feature', '', 'UD feature that labels on one word gave different values for'],
+        ['values', '', 'The conflicting values'],
+        ['words', 'num', 'Words with this combination, all treebanks'],
         ['treebanks', 'num', 'Number of treebanks with the conflict'],
         ['where', '', 'Most affected treebanks; links open their conflicts'],
         ['gold layers on those words', '', 'Gold features with this base name on the conflicting words'],
-        ['value combinations', '', 'Most frequent conflicting values; hover "+N more" for the rest'],
+        ['typical glosses', '', 'Most frequent glosses with this combination'],
       ], rowsA) +
       '<h2>Layer mismatches</h2>' + table([
         ['treebank', '', 'Gold treebank; links to its Errors tab'],
