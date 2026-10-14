@@ -1,6 +1,6 @@
 // Shared renderer for the gloss2feats evaluation site (logs/www/feats/).
-// Pages define `const DATA = {page: 'treebank' | 'all', ...}` before loading this
-// file; pages without DATA (index.html) only get sortable tables.
+// Pages define `const DATA = {page: 'treebank' | 'index', ...}` before loading
+// this file.
 (function () {
 'use strict';
 
@@ -9,6 +9,11 @@
 const STAGES = ['unknown_label', 'gloss_unmappable', 'unknown_um', 'um_no_ud', 'conflict'];
 const HAS_DATA = typeof DATA !== 'undefined';
 const STAGE_DESC = (HAS_DATA && DATA.problems) || {};
+// Tooltips for every status badge (problem stages plus the two non-problem statuses).
+const STATUS_DESC = Object.assign({
+  mapped: 'Gloss label mapped to a UD feature',
+  mixed: 'Status differs between treebanks',
+}, STAGE_DESC);
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -19,7 +24,10 @@ function sum(obj) { return Object.values(obj || {}).reduce((a, b) => a + b, 0); 
 function cnt(key, n, label) {
   return n ? '<span data-k="' + esc(key) + '" data-l="' + esc(label || key) + '">' + n + '</span>' : '0';
 }
+// Status badges get their description as tooltip unless one is given.
+// Add the 'badge' class for badges outside tables (larger, sans-serif).
 function chip(cls, text, title) {
+  if (title === undefined) title = STATUS_DESC[cls.split(' ')[0]];
   return '<span class="chip ' + esc(cls) + '"' + (title ? ' title="' + esc(title) + '"' : '') + '>' + esc(text) + '</span>';
 }
 function tile(v, k, extra) {
@@ -71,7 +79,7 @@ function makeSortable(root) {
 function filterBar(id, cats, placeholder) {
   return '<div class="filters" data-for="' + id + '">' +
     '<input type="search" placeholder="' + esc(placeholder || 'filter…') + '">' +
-    cats.map(c => chip(c[0] + ' fchip', c[1] || c[0], c[2])).join('') + '</div>';
+    cats.map(c => chip(c[0] + ' fchip badge', c[1] || c[0], c[2])).join('') + '</div>';
 }
 function wireFilter(root) {
   root.querySelectorAll('.filters[data-for]').forEach(bar => {
@@ -87,7 +95,7 @@ function wireFilter(root) {
     };
     input.addEventListener('input', apply);
     bar.querySelectorAll('.fchip').forEach(c => c.addEventListener('click', () => {
-      const cat = Array.from(c.classList).find(x => x !== 'chip' && x !== 'fchip' && x !== 'off');
+      const cat = Array.from(c.classList).find(x => !['chip', 'fchip', 'badge', 'off'].includes(x));
       c.classList.toggle('off');
       if (off.has(cat)) off.delete(cat); else off.add(cat);
       apply();
@@ -98,6 +106,7 @@ function wireFilter(root) {
 // ---------------------------------------------------------------- tabs + hash routing
 
 let TABS = [];
+let gotoStage = null;   // set by the per-treebank page: open the Problems tab at one stage
 const rendered = new Set();
 function hashParams() { return new URLSearchParams(location.hash.slice(1)); }
 function setHash(params) {
@@ -166,16 +175,23 @@ function featPairs(s) {
   }
   return out;
 }
-function renderFeats(s, other, cls) {
+// `conflicts`: feature names whose values came from two disagreeing labels;
+// the whole Feat=v1,v2 group is outlined.
+function renderFeats(s, other, cls, conflicts) {
   if (!s || s === '_') return '_';
   return s.split('|').map(kv => {
     const i = kv.indexOf('='), k = kv.slice(0, i);
-    return kv.slice(i + 1).split(',').map(v => {
+    const group = kv.slice(i + 1).split(',').map(v => {
       const p = k + '=' + v;
       return other.has(p) ? esc(p) : '<span class="' + cls + '">' + esc(p) + '</span>';
     }).join(',');
-  }).join('|');
+    return conflicts && conflicts.includes(k)
+      ? '<span class="fconflict" title="conflict: two gloss labels give different ' + esc(k) + ' values">' + group + '</span>'
+      : group;
+  }).join('|<wbr>');
 }
+// Allow long glosses to wrap after morpheme boundaries.
+function breakable(s) { return esc(s).replace(/([-.=])/g, '$1<wbr>'); }
 function labelChips(labels) {
   const notes = DATA.notes || {};
   return labels.map(([raw, label, problem]) => {
@@ -184,22 +200,35 @@ function labelChips(labels) {
     return chip(st, raw === label ? label : raw + ' → ' + label, st + (note ? ': ' + note : ''));
   }).join('');
 }
+// Two rows per token, sharing the ID cell: the input on top (FORM, Gloss,
+// gold FEATS) and what was derived from it below, tinted (UPOS + gloss UPOS,
+// labels, pred FEATS). Separate rows keep the two halves aligned when a
+// cell wraps.
 function renderSent(sid, ids) {
   const sent = DATA.sents[sid];
   if (!sent) return '';
   const gold = DATA.report.meta_summary.has_gold_feats;
   let h = '<div class="ex"><div class="ex-id">' + esc(sid) + '</div>';
   if (sent.comments.length) h += '<div class="ex-cm">' + sent.comments.map(esc).join('<br>') + '</div>';
-  h += '<div class="wrap"><table class="sent-tbl"><thead><tr><th>ID</th><th>FORM</th><th>UPOS</th><th>GlossUPOS</th><th>Gloss</th><th>Labels</th>' +
-       (gold ? '<th>gold FEATS</th>' : '') + '<th class="pred">pred FEATS</th></tr></thead><tbody>';
-  for (const [id, form, upos, gupos, gloss, labels, g, p] of sent.rows) {
+  h += '<table class="sent-tbl"><thead>' +
+       '<tr class="g"><th rowspan="2" title="Token ID; highlighted rows match the clicked item">ID</th>' +
+       '<th title="Word form">FORM</th>' +
+       '<th title="Word-level gloss, as read from the gloss field">Gloss</th>' +
+       '<th title="' + (gold ? 'Gold FEATS from the treebank. Amber: not predicted' : '') + '">' + (gold ? 'gold FEATS' : '') + '</th></tr>' +
+       '<tr class="p"><th title="Gold UPOS · UPOS implied by a gloss label (e.g. CVB → VERB)">UPOS · gloss UPOS</th>' +
+       '<th title="Gloss labels found, as written → resolved label. Colour shows how far mapping got; hover a chip for details">labels</th>' +
+       '<th title="FEATS mapped from the labels.' + (gold ? ' Red: not in gold.' : '') + ' Dashed outline: two labels gave different values">pred FEATS</th></tr></thead>';
+  for (const [id, form, upos, gupos, gloss, labels, g, p, conflicts] of sent.rows) {
     const gp = featPairs(g), pp = featPairs(p);
-    h += '<tr' + (ids.has(id) ? ' class="hl"' : '') + '><td>' + esc(id) + '</td><td>' + esc(form) + '</td><td>' + esc(upos) +
-         '</td><td>' + esc(gupos) + '</td><td>' + esc(gloss) + '</td><td>' + labelChips(labels) + '</td>' +
-         (gold ? '<td>' + renderFeats(g, pp, 'fn') + '</td><td class="pred">' + renderFeats(p, gp, 'fp') + '</td>'
-               : '<td class="pred">' + esc(p) + '</td>') + '</tr>';
+    const hl = ids.has(id) ? ' hl' : '';
+    const pos = esc(upos) + (gupos ? ' · <span class="gupos" title="UPOS implied by a gloss label">' + esc(gupos) + '</span>' : '');
+    h += '<tbody class="tok' + hl + '">' +
+         '<tr class="g"><td class="id" rowspan="2">' + esc(id) + '</td><td>' + esc(form) + '</td><td class="brk">' + breakable(gloss) +
+         '</td><td class="brk">' + (gold ? renderFeats(g, pp, 'fn') : '') + '</td></tr>' +
+         '<tr class="p"><td>' + pos + '</td><td class="brk">' + labelChips(labels) + '</td><td class="brk">' +
+         (gold ? renderFeats(p, gp, 'fp', conflicts) : renderFeats(p, new Set(), 'none', conflicts)) + '</td></tr></tbody>';
   }
-  return h + '</tbody></table></div></div>';
+  return h + '</table></div>';
 }
 
 // ================================================================= per-treebank page
@@ -210,12 +239,12 @@ function treebankPage() {
 
   function overview() {
     let h = '<h2>Summary</h2><div class="tiles">' +
-      tile(M.aligned_tokens, 'tokens (' + M.labelled_tokens + ' with labels)') +
+      tile(M.aligned_tokens, 'tokens (' + M.labelled_tokens + ' glossed)') +
       tile(pct(R.label_mapped), 'labels mapped (' + M.mapped_labels + ' / ' + M.labels + ')');
     if (gold) {
       h += tile(pct(R.precision), 'precision') + tile(pct(R.recall), 'recall') + tile(pct(R.f1), 'F1') +
            tile(pct(R.r_f1), 'F1, producible features only') + tile(pct(R.exact), 'exact FEATS match') +
-           tile(pct(R.exact_labelled), 'exact match, labelled tokens');
+           tile(pct(R.exact_labelled), 'exact match, glossed tokens');
     } else {
       h += tile('n/a – no gold FEATS', 'precision / recall / F1', ' na');
     }
@@ -223,7 +252,7 @@ function treebankPage() {
     for (const st of STAGES) {
       const e = (R.problems || {})[st] || {};
       h += '<div class="tile click" data-goto="problems" data-stage="' + st + '"><div class="v">' + sum(Object.fromEntries(
-        Object.entries(e).map(([k, v]) => [k, v.count]))) + '</div><div class="k">' + chip(st, st) + ' ' +
+        Object.entries(e).map(([k, v]) => [k, v.count]))) + '</div><div class="k">' + chip(st + ' badge', st) + ' ' +
         Object.keys(e).length + ' distinct</div></div>';
     }
     h += '</div>';
@@ -233,7 +262,7 @@ function treebankPage() {
       for (const [l, v] of Object.entries((R.problems || {})[st] || {})) fix.push([v.count, st, l, v]);
     }
     fix.sort((a, b) => b[0] - a[0]);
-    h += '<h2>Most frequent unmapped labels</h2><p class="desc">Adding or fixing rows in g2um_map.csv for these gains the most labels.</p>' +
+    h += '<h2>Most frequent unmapped labels</h2>' +
       table(['label', 'stage', ['count', 'num'], 'note'], fix.slice(0, 8).map(([n, st, l, v]) =>
         '<tr><td class="mono">' + esc(l) + '</td><td>' + chip(st, st) + '</td><td class="num">' +
         cnt('problem|' + st + '|' + l, n, st + ': ' + l) + '</td><td class="note">' + esc(v.note) + '</td></tr>'), 'plain');
@@ -251,31 +280,44 @@ function treebankPage() {
   }
 
   function problems() {
-    let h = '<p class="desc">Gloss labels that did not reach a UD feature, by the stage where mapping stopped, plus words where two labels give different values for one feature. Click a count for example sentences.</p>' +
-      '<div class="filters">' + STAGES.map(st => chip(st + ' stagechip', st, STAGE_DESC[st])).join('') + '</div>';
+    const probs = R.problems || {};
+    const total = st => Object.values(probs[st] || {}).reduce((a, v) => a + v.count, 0);
+    let h = '<div class="stagetabs">' + STAGES.map(st =>
+        '<button class="chip badge stagetab ' + st + '" data-stage="' + st + '" title="' + esc(STAGE_DESC[st] || '') + '"' +
+        (probs[st] ? '' : ' disabled') + '>' + esc(st) + ' <b>' + total(st) + '</b></button>').join('') + '</div>';
     for (const st of STAGES) {
-      const e = (R.problems || {})[st];
+      const e = probs[st];
       if (!e) continue;
-      const total = Object.values(e).reduce((a, v) => a + v.count, 0);
       const rows = Object.entries(e).map(([l, v]) =>
         '<tr><td class="mono">' + esc(l) + '</td><td class="num">' + cnt('problem|' + st + '|' + l, v.count, st + ': ' + l) +
         '</td><td class="num">' + (v.sentences != null ? v.sentences : '') + '</td><td class="mono note">' +
         rawForms(v.raw, l) + '</td><td class="note">' + esc(v.note) + '</td></tr>');
-      h += '<details class="stage" open data-stage="' + st + '"><summary>' + chip(st, st) + ' <b>' + total + '</b> occurrences, ' +
-        Object.keys(e).length + ' distinct — ' + esc(STAGE_DESC[st] || '') + '</summary>' +
+      h += '<div class="stage-pane" data-stage="' + st + '" hidden><p class="desc"><b>' + total(st) + '</b> occurrences, ' +
+        Object.keys(e).length + ' distinct — ' + esc(STAGE_DESC[st] || '') + '</p>' +
         table([st === 'conflict' ? 'feature=values' : 'label', ['count', 'num'], ['sentences', 'num'],
-               st === 'conflict' ? 'glosses' : 'as written (if different)', 'note'], rows) + '</details>';
+               st === 'conflict' ? 'glosses' : 'as written (if different)', 'note'], rows) + '</div>';
     }
     return h;
   }
-  function problemsAfter(sec) {
-    sec.querySelectorAll('.stagechip').forEach(c => c.addEventListener('click', () => {
-      c.classList.toggle('off');
-      const st = Array.from(c.classList).find(x => STAGES.includes(x));
-      const d = sec.querySelector('details[data-stage="' + st + '"]');
-      if (d) d.hidden = c.classList.contains('off');
-    }));
+  function showStage(st) {
+    const sec = document.getElementById('tab-problems');
+    if (!sec.querySelector('.stage-pane[data-stage="' + st + '"]')) {
+      const first = sec.querySelector('.stage-pane');
+      if (!first) return;
+      st = first.dataset.stage;
+    }
+    sec.querySelectorAll('.stagetab').forEach(b => b.classList.toggle('active', b.dataset.stage === st));
+    sec.querySelectorAll('.stage-pane').forEach(p => { p.hidden = p.dataset.stage !== st; });
+    const p = hashParams();
+    p.set('stage', st);
+    setHash(p);
   }
+  function problemsAfter(sec) {
+    sec.querySelectorAll('.stagetab').forEach(b => b.addEventListener('click', () => showStage(b.dataset.stage)));
+    const p = hashParams(), m = (p.get('ex') || '').match(/^problem\|([^|]+)\|/);
+    showStage(p.get('stage') || (m && m[1]) || STAGES[0]);
+  }
+  gotoStage = st => { showTab('problems'); showStage(st); };
 
   function labels() {
     const rows = Object.entries(R.labels).map(([l, s]) => {
@@ -289,35 +331,28 @@ function treebankPage() {
         (gold ? '<td data-v="' + (agree == null ? '' : agree) + '">' + bar(agree) + '</td><td class="num" data-v="' + (layer == null ? '' : layer) + '">' + pct(layer) + '</td>' : '') +
         '<td class="note">' + esc(s.note) + '</td></tr>';
     });
-    const heads = ['label', ['count', 'num'], 'status', 'as written', 'via', 'UM tag', 'UD', 'UPOS']
-      .concat(gold ? [['agree', 'num', 'Share of produced Feat=Val pairs found in gold FEATS'],
-                      ['layer', 'num', 'Share found in gold only on a layered feature, e.g. Person[psor]']] : [])
-      .concat(['note']);
-    return '<p class="desc">Every label found and how it resolved. <i>Via</i>: exact / upper (case-folded) / fused (3SG) / non (N- prefix) / classnum (LOC2) / udname (3Sing).' +
-      (gold ? ' <i>Agree</i>: share of the UD pairs it produced that appear in gold.' : '') + '</p>' +
-      filterBar('labels-tbl', [['mapped']].concat(STAGES.filter(s => s !== 'conflict').map(s => [s])), 'filter labels, forms, UD…') +
+    const heads = [
+      ['label', '', 'Canonical gloss label (the key in the gloss-to-UM map, or the label as written if unknown)'],
+      ['count', 'num', 'Occurrences; click for example sentences'],
+      ['status', '', 'How far mapping got for this label'],
+      ['as written', '', 'Spellings in the data that resolved to this label, with counts'],
+      ['via', '', 'How the written form resolved: exact / upper (case-folded) / fused (3SG) / non (N- prefix) / classnum (LOC2) / udname (3Sing)'],
+      ['UM tag', '', 'UniMorph tag from the gloss-to-UM map'],
+      ['UD', '', 'UD features from the UM-to-UD map'],
+      ['UPOS', '', 'UPOS implied by the label, if any'],
+    ].concat(gold ? [['agree', 'num', 'Share of the Feat=Val pairs this label produced that appear in gold FEATS'],
+                     ['layer', 'num', 'Share found in gold only on a layered feature, e.g. Person[psor]']] : [])
+      .concat([['note', '', 'Note from the gloss-to-UM map, or the UM category for UM-to-UD problems']]);
+    return       filterBar('labels-tbl', [['mapped']].concat(STAGES.filter(s => s !== 'conflict').map(s => [s])), 'filter labels, forms, UD…') +
       '<div id="labels-tbl">' + table(heads, rows) + '</div>';
   }
 
   function errors() {
-    const pf = Object.entries(R.per_feature || {});
-    const prod = pf.filter(([, c]) => c.producible), unprod = pf.filter(([, c]) => !c.producible);
-    let h = '<h2>Per feature (producible)</h2><p class="desc">Atomic Feat=Val pairs against gold FEATS, for features some row of the gloss→UniMorph map can produce. Click a feature for its value matrix.</p>' +
-      table(['feature', ['TP', 'num'], ['FP', 'num'], ['FN', 'num'], ['P', 'num'], ['R', 'num'], ['F1', 'num']], prod.map(([f, c]) =>
-        '<tr><td class="mono"><a href="#" data-mx="' + esc(f) + '">' + esc(f) + '</a></td><td class="num">' + (c.tp || 0) + '</td><td class="num">' +
-        (c.fp || 0) + '</td><td class="num">' + (c.fn || 0) + '</td><td class="num">' + pct(c.precision) + '</td><td class="num">' +
-        pct(c.recall) + '</td><td class="num" style="' + heat(c.f1) + '">' + pct(c.f1) + '</td></tr>'));
-    if (unprod.length) {
-      h += '<details><summary class="desc">' + unprod.length + ' gold features the map cannot produce (' +
-        unprod.reduce((a, [, c]) => a + (c.fn || 0), 0) + ' missed pairs): ' + esc(unprod.map(x => x[0]).join(', ')) + '</summary>' +
-        table(['feature', ['FN', 'num']], unprod.map(([f, c]) => '<tr><td class="mono">' + esc(f) + '</td><td class="num">' + (c.fn || 0) + '</td></tr>')) +
-        '</details>';
-    }
-    const KINDS = [['value_mismatch', 'value', 'fp', 'Predicted value differs from gold value'],
-                   ['layer_mismatch', 'layer', 'fp', 'Gold has the value on a layered feature'],
-                   ['overgeneration', 'overgeneration', 'fp', 'Gold lacks the feature'],
-                   ['producible', 'missed (producible)', 'miss', 'In gold, map could produce it'],
-                   ['unproducible', 'missed (unproducible)', 'miss', 'In gold, map cannot produce it']];
+    const KINDS = [['value_mismatch', 'value', 'fp', 'Predicted, but gold has another value for the feature'],
+                   ['layer_mismatch', 'layer', 'fp', 'Predicted, but gold has the value on a layered feature (e.g. Person[psor])'],
+                   ['overgeneration', 'overgeneration', 'fp', 'Predicted, but gold lacks the feature'],
+                   ['producible', 'missed (producible)', 'miss', 'In gold but not predicted; the gloss-to-UM map can produce this feature'],
+                   ['unproducible', 'missed (unproducible)', 'miss', 'In gold but not predicted; no row of the gloss-to-UM map produces this feature']];
     const rows = [];
     for (const [kind, name, src] of KINDS) {
       const e = (src === 'fp' ? R.disagreements : R.misses) || {};
@@ -326,68 +361,20 @@ function treebankPage() {
           cnt(src + '|' + kind + '|' + k, n, name + ': ' + k) + '</td></tr>');
       }
     }
-    const totals = KINDS.map(([kind, name, src]) => [kind, name + ' (' + sum(((src === 'fp' ? R.disagreements : R.misses) || {})[kind]) + ')']);
-    h += '<h2>Pair-level errors</h2><p class="desc"><b>value</b> / <b>layer</b> / <b>overgeneration</b>: predicted but not in gold. <b>missed</b>: in gold but not predicted. Toggle kinds with the chips.</p>' +
-      filterBar('err-tbl', totals.map(([k, n]) => [k, n]), 'filter pairs…') +
-      '<div id="err-tbl">' + table(['pair', 'kind', ['count', 'num']], rows) + '</div>';
-    return h;
+    const chips = KINDS.map(([kind, name, src, desc]) =>
+      [kind, name + ' (' + sum(((src === 'fp' ? R.disagreements : R.misses) || {})[kind]) + ')', desc + '. Click to show/hide.']);
+    return filterBar('err-tbl', chips, 'filter pairs…') +
+      '<div id="err-tbl">' + table([
+        ['pair', '', 'The Feat=Val pair: for value and layer errors, predicted pair and the gold one it clashes with'],
+        ['kind', '', 'Kind of error (hover badges above for descriptions)'],
+        ['count', 'num', 'Tokens with this error; click for example sentences'],
+      ], rows) + '</div>';
   }
   function errorsAfter(sec) {
-    sec.querySelectorAll('[data-mx]').forEach(a => a.addEventListener('click', ev => {
-      ev.preventDefault();
-      showTab('matrix');
-      drawMatrix(a.dataset.mx, false);
-    }));
+    sec.querySelector('#err-tbl thead th:nth-child(3)').click();   // count, descending
     // start with the missed-unproducible bucket off: it is large and not actionable here
     const c = sec.querySelector('.filters[data-for="err-tbl"] .fchip.unproducible');
     if (c) c.click();
-  }
-
-  let mxMerged = false;
-  function matrix() {
-    return '<p class="desc">Rows: gold value, columns: predicted value, per token (∅ = feature absent). ' +
-      '<i>Merge layers</i> folds layered gold features (Person[p], Number[psor]…) into the base feature before comparing. Click an off-diagonal cell for examples.</p>' +
-      '<div class="filters"><select id="mx-feat"></select><label><input type="checkbox" id="mx-merge"> merge layers</label></div>' +
-      '<div class="wrap"><table id="mx"></table></div>';
-  }
-  function drawMatrix(f, merged) {
-    if (merged != null) mxMerged = merged;
-    const VC = mxMerged ? R.value_confusion_merged : R.value_confusion;
-    const sel = document.getElementById('mx-feat');
-    const feats = Object.keys(VC || {}).sort((a, b) => a.localeCompare(b));
-    sel.innerHTML = feats.map(x => '<option>' + esc(x) + '</option>').join('');
-    if (!feats.includes(f)) f = feats.includes(f && f.replace(/\[.*\]$/, '')) ? f.replace(/\[.*\]$/, '') : feats[0];
-    sel.value = f;
-    document.getElementById('mx-merge').checked = mxMerged;
-    const M = VC[f] || {}, NONE = DATA.none;
-    const colSet = new Set();
-    Object.values(M).forEach(r => Object.keys(r).forEach(p => colSet.add(p)));
-    const order = (a, b) => (a === NONE) - (b === NONE) || a.localeCompare(b);
-    const rows = Object.keys(M).sort(order), cols = Array.from(colSet).sort(order);
-    let maxV = 1;
-    rows.forEach(g => cols.forEach(p => { if (g !== p && M[g][p]) maxV = Math.max(maxV, M[g][p]); }));
-    const prefix = mxMerged ? 'vcm|' : 'vc|';
-    let h = '<thead><tr><th class="rh">gold \\ pred</th>' + cols.map(p => '<th class="col">' + esc(p) + '</th>').join('') + '</tr></thead><tbody>';
-    for (const g of rows) {
-      h += '<tr><th class="rh">' + esc(g) + '</th>';
-      for (const p of cols) {
-        const n = M[g][p] || 0;
-        if (!n) { h += '<td></td>'; continue; }
-        if (g === p) { h += '<td class="diag" title="' + n + ' correct">' + n + '</td>'; continue; }
-        const ch = Math.round(255 * (1 - n / maxV * 0.8));
-        h += '<td style="background:rgb(255,' + ch + ',' + ch + ')" title="' + esc(f + ': gold ' + g + ' → pred ' + p) + '">' +
-          cnt(prefix + f + '|' + g + '|' + p, n, f + ': gold ' + g + ' → pred ' + p) + '</td>';
-      }
-      h += '</tr>';
-    }
-    document.getElementById('mx').innerHTML = h + '</tbody>';
-  }
-  function matrixAfter() {
-    document.getElementById('mx-feat').addEventListener('change', e => drawMatrix(e.target.value));
-    document.getElementById('mx-merge').addEventListener('change', e => drawMatrix(document.getElementById('mx-feat').value, e.target.checked));
-    const ex = hashParams().get('ex') || '';
-    const m = ex.match(/^(vcm?)\|([^|]+)\|/);
-    drawMatrix(m ? m[2] : 'Person', m ? m[1] === 'vcm' : false);
   }
 
   buildTabs([
@@ -395,164 +382,304 @@ function treebankPage() {
     { id: 'problems', label: 'Problems', render: problems, after: problemsAfter },
     { id: 'labels', label: 'Labels', render: labels },
     { id: 'errors', label: 'Errors', render: errors, after: errorsAfter, hidden: !gold },
-    { id: 'matrix', label: 'Matrix', render: matrix, after: matrixAfter, hidden: !gold },
   ]);
 }
 
-// ================================================================= cross-treebank page
+// ================================================================= index (all treebanks)
 
-function allPage() {
+function indexPage() {
   const RS = DATA.reports, names = Object.keys(RS).sort();
   const goldNames = names.filter(n => RS[n].meta_summary.has_gold_feats);
-  const link = (n, tab, key) => n + '.html#' + new URLSearchParams(key ? { tab, ex: key } : { tab }).toString();
+  const link = (n, params) => n + '.html#' + new URLSearchParams(params).toString();
+  const NONCONF = STAGES.filter(s => s !== 'conflict');
+  // small inline chips: Feat=Val with a share, or a treebank with a coloured agreement
+  const fc = (text, title, style) => '<span class="fc"' + (style ? ' style="' + style + '"' : '') +
+    (title ? ' title="' + esc(title) + '"' : '') + '>' + text + '</span>';
+  // Top k entries as chips, the rest behind a hoverable "+N more" chip.
+  const topList = (obj, total, k) => {
+    const all = Object.entries(obj).sort((a, b) => b[1] - a[1]);
+    return all.slice(0, k).map(([p, n]) => total
+      ? fc(esc(p) + ' <b>' + pct(n / total) + '</b>', p + ': ' + n + ' of ' + total)
+      : fc(esc(p) + ' ×' + n)).join('') + moreChip(all.slice(k), total);
+  };
+  const moreChip = (rest, total) => rest.length ? '<span class="fc more" data-tip="' + esc(rest.slice(0, 12)
+    .map(([p, n]) => p + '  ' + n + (total ? ' (' + pct(n / total) + ')' : '')).join('\n') +
+    (rest.length > 12 ? '\n… ' + (rest.length - 12) + ' more' : '')) + '">+' + rest.length + ' more</span>' : '';
+  const where = (by, params) => {
+    const e = Object.entries(by).sort((a, b) => b[1] - a[1]);
+    return e.slice(0, 4).map(([n, c]) => '<a href="' + link(n, params) + '" title="' + esc(RS[n].meta_summary.treebank) + '">' + esc(n) + '</a> ' + c).join(' · ') +
+      (e.length > 4 ? ' <span class="desc" title="' + esc(e.slice(4).map(([n, c]) => n + ' ' + c).join(', ')) + '">+' + (e.length - 4) + '</span>' : '');
+  };
 
+  // ---------- pooled data for the three issue views
+  const unmapped = {};
+  names.forEach(n => NONCONF.forEach(st => Object.entries(((RS[n].problems || {})[st]) || {}).forEach(([l, v]) => {
+    const a = unmapped[st + '|' + l] = unmapped[st + '|' + l] || { st, l, by: {}, raw: {}, note: v.note, tokens: 0, unex: {} };
+    a.by[n] = v.count;
+    Object.entries(v.raw || {}).forEach(([r, c]) => { a.raw[r] = (a.raw[r] || 0) + c; });
+    a.tokens += v.tokens || 0;
+    Object.entries(v.gold_unexplained || {}).forEach(([p, c]) => { a.unex[p] = (a.unex[p] || 0) + c; });
+  })));
+
+  const mapped = {};
+  goldNames.forEach(n => Object.entries(RS[n].labels || {}).forEach(([l, s]) => {
+    if (s.problem || !s.pairs) return;
+    const a = mapped[l] = mapped[l] || { l, ud: s.ud, pairs: 0, agree: 0, layer: 0, instead: {}, by: {} };
+    a.pairs += s.pairs; a.agree += s.agree; a.layer += s.layer_agree;
+    // keys are "pred pair → gold"; for single-feature labels the UD column already
+    // shows the predicted pair, so keep only the gold side
+    const single = !(s.ud || '').includes('|');
+    a.where = a.where || {};
+    Object.entries(s.gold_instead || {}).forEach(([p, c]) => {
+      const k = single ? p.split(' → ').pop() : p;
+      a.instead[k] = (a.instead[k] || 0) + c;
+      (a.where[k] = a.where[k] || []).push([n, c, p]);   // treebank, count, key in that treebank
+    });
+    a.by[n] = s;
+  }));
+  const LOW = { pairs: 20, agree: 0.7 };
+  const isLow = a => a.pairs >= LOW.pairs && a.agree / a.pairs < LOW.agree;
+
+  const conflicts = {};
+  names.forEach(n => Object.entries(((RS[n].problems || {}).conflict) || {}).forEach(([k, v]) => {
+    const f = k.split('=')[0];
+    const a = conflicts[f] = conflicts[f] || { f, words: 0, by: {}, combos: {}, layers: {} };
+    a.words += v.count;
+    a.by[n] = (a.by[n] || 0) + v.count;
+    a.combos[k] = (a.combos[k] || 0) + v.count;
+    Object.entries(v.gold_layers || {}).forEach(([p, c]) => { a.layers[p] = (a.layers[p] || 0) + c; });
+  }));
+
+  // ---------- Overview
   function overview() {
-    let toks = 0, labs = 0, mapped = 0, tp = 0, fp = 0, fn = 0;
+    let toks = 0, labs = 0, mappedN = 0, tp = 0, fp = 0, fn = 0;
     names.forEach(n => {
       const m = RS[n].meta_summary;
-      toks += m.aligned_tokens; labs += m.labels; mapped += m.mapped_labels;
+      toks += m.aligned_tokens; labs += m.labels; mappedN += m.mapped_labels;
       if (m.has_gold_feats) { const s = RS[n].support.pairs; tp += s.tp; fp += s.fp; fn += s.fn; }
     });
     const p = tp + fp ? tp / (tp + fp) : null, r = tp + fn ? tp / (tp + fn) : null;
+    const unN = Object.values(unmapped).reduce((x, a) => x + sum(a.by), 0);
+    const lowN = Object.values(mapped).filter(isLow).length;
+    const confN = Object.values(conflicts).reduce((x, a) => x + a.words, 0);
     let h = '<h2>Pooled</h2><div class="tiles">' + tile(names.length, 'treebanks (' + goldNames.length + ' with gold FEATS)') +
-      tile(toks, 'tokens') + tile(pct(labs ? mapped / labs : null), 'labels mapped (' + mapped + ' / ' + labs + ')') +
+      tile(toks, 'tokens') + tile(pct(labs ? mappedN / labs : null), 'labels mapped (' + mappedN + ' / ' + labs + ')') +
       tile(pct(p), 'precision, gold treebanks') + tile(pct(r), 'recall, gold treebanks') +
-      tile(pct(p && r ? 2 * p * r / (p + r) : null), 'F1, gold treebanks') + '</div>';
-    h += '<h2>Treebanks</h2><p class="desc">Bars: how each treebank\'s gloss labels split across mapping stages. ' +
-      ['mapped'].concat(STAGES.filter(s => s !== 'conflict')).map(s => chip(s, s)).join(' ') + '</p>';
+      tile(pct(p && r ? 2 * p * r / (p + r) : null), 'F1, gold treebanks') + '</div>' +
+      '<h2>Issues</h2><div class="tiles">' +
+      '<div class="tile click" data-goto="unmapped"><div class="v">' + unN + '</div><div class="k">unmapped label occurrences (' + Object.keys(unmapped).length + ' distinct)</div></div>' +
+      '<div class="tile click" data-goto="lowagree"><div class="v">' + lowN + '</div><div class="k">mapped labels that rarely agree with gold</div></div>' +
+      '<div class="tile click" data-goto="conflicts"><div class="v">' + confN + '</div><div class="k">words with conflicting labels (' + Object.keys(conflicts).length + ' features)</div></div></div>';
+
     const rows = names.map(n => {
-      const R = RS[n], m = R.meta_summary;
+      const R = RS[n], m = R.meta_summary, s = R.support, g = m.has_gold_feats;
       const parts = { mapped: m.mapped_labels };
-      for (const st of STAGES) if (st !== 'conflict') parts[st] = Object.values((R.problems || {})[st] || {}).reduce((a, v) => a + v.count, 0);
+      NONCONF.forEach(st => { parts[st] = Object.values((R.problems || {})[st] || {}).reduce((a, v) => a + v.count, 0); });
       const tot = sum(parts) || 1;
       const stack = '<div class="stack">' + Object.entries(parts).filter(([, v]) => v).map(([k, v]) =>
-        '<span class="' + k + '" style="width:' + (100 * v / tot) + '%" title="' + k + ': ' + v + '"></span>').join('') + '</div>';
-      return '<tr><td><a href="' + n + '.html">' + esc(n) + '</a></td><td>' + esc(m.treebank) + '</td><td class="num">' + m.aligned_tokens +
-        '</td><td class="num">' + m.labels + '</td><td class="num">' + pct(R.label_mapped) + '</td><td style="min-width:220px">' + stack +
-        '</td><td class="num">' + (m.has_gold_feats ? pct(R.f1) : 'n/a') + '</td><td class="num">' + (m.has_gold_feats ? pct(R.r_f1) : 'n/a') + '</td></tr>';
+        '<span class="' + k + '" style="width:' + (100 * v / tot) + '%" title="' + esc(STATUS_DESC[k]) + ': ' + v + '"></span>').join('') + '</div>';
+      const sc = k => '<td class="num">' + (g ? pct(R[k]) : 'n/a') + '</td>';
+      return '<tr><td><a href="' + n + '.html">' + esc(n) + '</a></td><td>' + esc(m.treebank) + '</td>' +
+        '<td class="num">' + m.aligned_sentences + '/' + m.total_sentences + '</td><td class="num">' + m.aligned_tokens + '</td>' +
+        '<td class="num">' + m.labelled_tokens + '</td><td class="num">' + m.labels + '</td><td class="num">' + pct(R.label_mapped) + '</td>' +
+        '<td style="min-width:180px">' + stack + '</td>' + ['precision', 'recall', 'f1', 'r_f1', 'exact', 'exact_labelled'].map(sc).join('') + '</tr>';
     });
-    return h + table(['name', 'treebank', ['tokens', 'num'], ['labels', 'num'], ['mapped', 'num'], 'label stages', ['F1', 'num'], ['rF1', 'num']], rows);
+    // micro averages over gold treebanks
+    const t = { tp: 0, fp: 0, fn: 0, rtp: 0, rfp: 0, rfn: 0, ex: 0, tok: 0, exl: 0, lab: 0 };
+    goldNames.forEach(n => {
+      const s = RS[n].support;
+      ['tp', 'fp', 'fn'].forEach(k => { t[k] += s.pairs[k]; t['r' + k] += s.restricted[k]; });
+      t.ex += s.exact.correct; t.tok += s.exact.total; t.exl += s.exact_labelled.correct; t.lab += s.exact_labelled.total;
+    });
+    const prf = (a, b, c) => { const P = a + b ? a / (a + b) : null, Rc = a + c ? a / (a + c) : null; return [P, Rc, P && Rc ? 2 * P * Rc / (P + Rc) : null]; };
+    const [mp, mr, mf] = prf(t.tp, t.fp, t.fn), rf = prf(t.rtp, t.rfp, t.rfn)[2];
+    const foot = '<tfoot><tr><td>micro avg</td><td class="note">scores: gold treebanks only</td><td></td><td class="num">' + toks +
+      '</td><td></td><td class="num">' + labs + '</td><td class="num">' + pct(labs ? mappedN / labs : null) + '</td><td></td>' +
+      [mp, mr, mf, rf, t.tok ? t.ex / t.tok : null, t.lab ? t.exl / t.lab : null].map(v => '<td class="num">' + pct(v) + '</td>').join('') + '</tr></tfoot>';
+    const heads = [['name', '', 'Mapped corpus; links to its page'], ['treebank', '', 'Gold treebank'],
+      ['sents', 'num', 'Evaluated sentences / total in gold'], ['tokens', 'num', 'Evaluated tokens'],
+      ['glossed', 'num', 'Tokens with at least one gloss label'], ['labels', 'num', 'Gloss label occurrences'],
+      ['mapped', 'num', 'Share of gloss labels that reached a UD feature'],
+      ['label stages', '', 'How the treebank\'s gloss labels split across mapping stages'],
+      ['P', 'num', 'Precision of Feat=Val pairs'], ['R', 'num', 'Recall of Feat=Val pairs'], ['F1', 'num', 'F1 of Feat=Val pairs'],
+      ['rF1', 'num', 'F1 restricted to features the gloss-to-UM map can produce'],
+      ['exact', 'num', 'Tokens whose FEATS match gold exactly'], ['exact (glossed)', 'num', 'Exact match among tokens with gloss labels']];
+    return h + '<h2>Treebanks</h2>' + table(heads, rows).replace('</tbody></table>', '</tbody>' + foot + '</table>');
   }
 
-  function labels() {
-    const all = {};
-    names.forEach(n => Object.entries(RS[n].labels || {}).forEach(([l, s]) => {
-      (all[l] = all[l] || {}).by = all[l].by || {};
-      all[l].by[n] = s;
-      all[l].status = all[l].status && all[l].status !== (s.problem || 'mapped') ? 'mixed' : (s.problem || 'mapped');
-      all[l].ud = all[l].ud || s.ud;
-    }));
-    const rows = Object.entries(all).map(([l, a]) => {
-      const total = Object.values(a.by).reduce((x, s) => x + s.count, 0);
-      const ag = goldNames.filter(n => a.by[n] && a.by[n].pairs && a.by[n].agree != null).map(n => a.by[n].agree / a.by[n].pairs);
-      const spread = ag.length > 1 ? Math.max(...ag) - Math.min(...ag) : null;
-      const cells = names.map(n => {
-        const s = a.by[n];
-        if (!s) return '<td class="grey"></td>';
-        const v = s.pairs && s.agree != null ? s.agree / s.pairs : null;
-        return '<td class="heat" data-v="' + s.count + '" style="' + heat(v) + '" title="' + esc(n + ': ' + s.count + '×' + (v != null ? ', agree ' + pct(v) : '')) + '">' +
-          '<a href="' + link(n, 'labels', 'label|' + l) + '">' + s.count + '</a>' + (v != null ? ' · ' + pct(v) : '') + '</td>';
+  // ---------- Unmapped labels
+  function unmappedTab() {
+    const rows = Object.values(unmapped).sort((a, b) => sum(b.by) - sum(a.by)).map(a => {
+      const label = a.st + ': ' + a.l;
+      return '<tr data-c="' + a.st + '" data-f="' + esc((a.l + ' ' + Object.keys(a.raw).join(' ')).toLowerCase()) + '">' +
+        '<td class="mono">' + esc(a.l) + '</td><td>' + chip(a.st, a.st) + '</td><td class="num">' + sum(a.by) + '</td>' +
+        '<td class="num">' + Object.keys(a.by).length + '</td>' +
+        '<td class="note">' + where(a.by, { tab: 'problems', stage: a.st, ex: 'problem|' + a.st + '|' + a.l }) + '</td>' +
+        '<td>' + (a.tokens ? topList(a.unex, a.tokens, 3) : '<span class="desc">no gold</span>') + '</td>' +
+        '<td class="mono note">' + rawForms(a.raw, a.l) + '</td><td class="note">' + esc(a.note || '') + '</td></tr>';
+    });
+    return filterBar('x-unmapped', NONCONF.map(s => [s]), 'filter labels, spellings…') +
+      '<div id="x-unmapped">' + table([
+        ['label', '', 'Gloss label (canonical, or as written if unknown)'],
+        ['stage', '', 'Where mapping stopped'],
+        ['occurrences', 'num', 'Occurrences, all treebanks'],
+        ['treebanks', 'num', 'Number of treebanks it occurs in'],
+        ['where', '', 'Most affected treebanks; links open the examples there'],
+        ['candidate gold feats', '', 'Unpredicted gold pairs on words with this label, as share of those words'],
+        ['as written', '', 'Spellings in the data that resolved to this label, pooled'],
+        ['note', '', 'Note from the gloss-to-UM map'],
+      ], rows) + '</div>';
+  }
+
+  // ---------- Low agreement
+  function lowAgreeTab() {
+    const lostOf = a => a.pairs - a.agree;
+    const rows = Object.values(mapped).sort((x, y) => lostOf(y) - lostOf(x)).map(a => {
+      const ag = a.agree / a.pairs, lost = lostOf(a);
+      const tbs = Object.entries(a.by).sort((x, y) => y[1].pairs - x[1].pairs).map(([n, s]) => {
+        const v = s.agree / s.pairs;
+        return '<a href="' + link(n, { tab: 'labels', ex: 'label|' + a.l }) + '">' +
+          fc(esc(n) + ' ' + pct(v), RS[n].meta_summary.treebank + ': ' + s.agree + ' of ' + s.pairs + ' pairs in gold', heat(v)) + '</a>';
       }).join('');
-      return '<tr data-c="' + a.status + '" data-f="' + esc((l + ' ' + (a.ud || '')).toLowerCase()) + '"><td class="mono">' + esc(l) + '</td><td>' +
-        chip(a.status, a.status) + '</td><td class="mono">' + esc(a.ud || '') + '</td><td class="num">' + total + '</td><td class="num">' +
-        Object.keys(a.by).length + '</td>' + cells + '<td class="num" data-v="' + (spread == null ? '' : spread) + '">' + pct(spread) + '</td></tr>';
+      return '<tr data-pairs="' + a.pairs + '" data-agree="' + ag + '" data-f="' + esc((a.l + ' ' + a.ud).toLowerCase()) + '">' +
+        '<td class="mono">' + esc(a.l) + '</td><td class="mono">' + esc(a.ud) + '</td><td class="num">' + a.pairs + '</td>' +
+        '<td data-v="' + ag + '">' + bar(ag) + '</td>' +
+        '<td class="num">' + lost + '</td>' +
+        '<td>' + insteadList(a, lost) + '</td><td>' + tbs + '</td></tr>';
     });
-    return '<p class="desc">Each gloss label across treebanks: count · agreement with gold (share of produced Feat=Val pairs found in gold FEATS; coloured red→green). ' +
-      '<i>Spread</i> is the max−min agreement across gold treebanks; a wide spread suggests the label is used differently by different languages. Counts link to that treebank\'s examples.</p>' +
-      filterBar('x-labels', [['mapped'], ['mixed']].concat(STAGES.filter(s => s !== 'conflict').map(s => [s])), 'filter labels, UD…') +
-      '<div id="x-labels">' + table(['label', 'status', 'UD', ['total', 'num'], ['treebanks', 'num']].concat(names.map(n => [n, 'num']))
-        .concat([['spread', 'num', 'max − min agreement across gold treebanks']]), rows) + '</div>';
+    return '<div class="filters thresholds" data-for="x-low"><input type="search" placeholder="filter labels, UD…">' +
+      '<label>min. produced pairs <input type="number" min="1" value="' + LOW.pairs + '" data-th="pairs"></label>' +
+      '<label>max. agreement % <input type="number" min="0" max="100" value="' + (LOW.agree * 100) + '" data-th="agree"></label>' +
+      '<span class="desc" id="x-low-n"></span></div>' +
+      '<div id="x-low">' + table([
+        ['label', '', 'Mapped gloss label'],
+        ['UD', '', 'UD features it maps to'],
+        ['pairs', 'num', 'Feat=Val pairs it produced, gold treebanks'],
+        ['agree', 'num', 'Share of produced pairs found in gold FEATS'],
+        ['lost', 'num', 'Produced pairs not in gold (pairs × (1 − agree)): the most to gain at the top'],
+        ['what gold has instead', '', 'Gold counterpart of lost pairs: layered feature, other value, same value elsewhere, or other gold pairs on the word (∅ = none). Click for examples'],
+        ['per treebank', '', 'Agreement per treebank; click for examples'],
+      ], rows) + '</div>';
+  }
+  // Badges link to the examples in the treebank where the disagreement is most frequent.
+  function insteadList(a, lost) {
+    return Object.entries(a.instead).sort((x, y) => y[1] - x[1]).slice(0, 3).map(([k, c]) => {
+      const [n, , key] = a.where[k].sort((x, y) => y[1] - x[1])[0];
+      return '<a href="' + link(n, { tab: 'labels', ex: 'instead|' + a.l + '|' + key }) + '">' +
+        fc(esc(k) + ' <b>' + pct(lost ? c / lost : null) + '</b>') + '</a>';
+    }).join('');
+  }
+  function lowAgreeAfter(sec) {
+    const search = sec.querySelector('.thresholds input[type=search]');
+    const apply = () => {
+      const q = search.value.trim().toLowerCase();
+      const minP = +sec.querySelector('[data-th=pairs]').value || 0, maxA = (+sec.querySelector('[data-th=agree]').value) / 100;
+      let n = 0;
+      sec.querySelectorAll('#x-low tbody tr').forEach(r => {
+        const show = +r.dataset.pairs >= minP && +r.dataset.agree < maxA && (!q || r.dataset.f.includes(q));
+        r.classList.toggle('hidden', !show);
+        n += show;
+      });
+      sec.querySelector('#x-low-n').textContent = n + ' labels';
+    };
+    sec.querySelectorAll('.thresholds input').forEach(i => i.addEventListener('input', apply));
+    apply();
   }
 
-  function problems() {
-    const all = {};
-    names.forEach(n => STAGES.filter(s => s !== 'conflict').forEach(st =>
-      Object.entries(((RS[n].problems || {})[st]) || {}).forEach(([l, v]) => {
-        const k = st + '|' + l;
-        const a = all[k] = all[k] || { st, l, by: {}, raw: {}, note: v.note };
-        a.by[n] = v.count;
-        Object.entries(v.raw || {}).forEach(([r, c]) => { a.raw[r] = (a.raw[r] || 0) + c; });
-      })));
-    const rows = Object.values(all).map(a => {
-      const total = sum(a.by);
-      return '<tr data-c="' + a.st + '" data-f="' + esc(a.l.toLowerCase() + ' ' + Object.keys(a.raw).join(' ').toLowerCase()) + '"><td class="mono">' + esc(a.l) + '</td><td>' + chip(a.st, a.st) +
-        '</td><td class="num">' + total + '</td><td class="num">' + Object.keys(a.by).length + '</td>' +
-        names.map(n => a.by[n] ? '<td class="num"><a href="' + link(n, 'problems', 'problem|' + a.st + '|' + a.l) + '">' + a.by[n] + '</a></td>' : '<td class="grey"></td>').join('') +
-        '<td class="mono note">' + rawForms(a.raw, a.l) + '</td><td class="note">' + esc(a.note) + '</td></tr>';
+  // ---------- Conflicts / layering
+  function conflictsTab() {
+    const rowsA = Object.values(conflicts).sort((a, b) => b.words - a.words).map(a => {
+      const goldTotal = sum(a.layers);
+      return '<tr><td class="mono">' + esc(a.f) + '</td><td class="num">' + a.words + '</td><td class="num">' + Object.keys(a.by).length + '</td>' +
+        '<td class="note">' + where(a.by, { tab: 'problems', stage: 'conflict' }) + '</td>' +
+        '<td>' + (goldTotal ? topList(a.layers, goldTotal, 3) : '<span class="desc">no gold</span>') + '</td>' +
+        '<td>' + topList(a.combos, 0, 3) + '</td></tr>';
     });
-    let h = '<h2>To-do list for g2um_map.csv</h2><p class="desc">Labels that did not reach a UD feature, pooled over treebanks. Sorted by total count; unknown labels are candidates for new map rows, unmappable ones for a decision (new UM tag, layered feature, or leave out).</p>' +
-      filterBar('x-probs', STAGES.filter(s => s !== 'conflict').map(s => [s]), 'filter labels…') +
-      '<div id="x-probs">' + table(['label', 'stage', ['total', 'num'], ['treebanks', 'num']].concat(names.map(n => [n, 'num'])).concat(['as written', 'note']), rows) + '</div>';
-
-    const conf = {};
-    names.forEach(n => Object.entries(((RS[n].problems || {}).conflict) || {}).forEach(([k, v]) => {
-      const f = k.split('=')[0];
-      (conf[f] = conf[f] || {})[n] = ((conf[f] || {})[n] || 0) + v.count;
-    }));
-    h += '<h2>Conflicts by feature</h2><p class="desc">Words where two labels gave different values for one feature (typically agreement with more than one argument; UD would need layered features).</p>' +
-      table(['feature', ['words', 'num'], ['treebanks', 'num']].concat(names.map(n => [n, 'num'])), Object.entries(conf).map(([f, by]) =>
-        '<tr><td class="mono">' + esc(f) + '</td><td class="num">' + sum(by) + '</td><td class="num">' + Object.keys(by).length + '</td>' +
-        names.map(n => '<td class="num">' + (by[n] ? '<a href="' + link(n, 'problems') + '">' + by[n] + '</a>' : '') + '</td>').join('') + '</tr>'));
-    return h;
-  }
-  function problemsAfter(sec) {
-    const th = sec.querySelector('#x-probs thead th:nth-child(3)');
-    if (th) th.click();
-  }
-
-  function features() {
-    if (!goldNames.length) return '<p class="desc">No treebank with gold FEATS.</p>';
-    const feats = new Set(), prod = new Set();
-    goldNames.forEach(n => Object.entries(RS[n].per_feature || {}).forEach(([f, c]) => { feats.add(f); if (c.producible) prod.add(f); }));
-    const row = f => '<tr><td class="mono">' + esc(f) + '</td><td>' + (prod.has(f) ? 'yes' : '') + '</td>' +
-      goldNames.map(n => {
-        const c = (RS[n].per_feature || {})[f];
-        if (!c) return '<td class="grey"></td>';
-        return '<td class="heat" data-v="' + (c.f1 == null ? '' : c.f1) + '" style="' + heat(c.f1) + '" title="' +
-          esc(n + ' ' + f + ': TP ' + (c.tp || 0) + ' FP ' + (c.fp || 0) + ' FN ' + (c.fn || 0)) + '">' +
-          '<a href="' + link(n, 'errors') + '">' + pct(c.f1) + '</a></td>';
-      }).join('') + '</tr>';
-    const sorted = Array.from(feats).sort((a, b) => a.localeCompare(b));
-    const unprod = sorted.filter(f => !prod.has(f));
-    const heads = ['feature', 'producible'].concat(goldNames.map(n => [n, 'num']));
-    let h = '<h2>F1 per feature</h2><p class="desc">Gold treebanks only; grey = feature absent from that treebank. Hover for TP/FP/FN.</p>' +
-      table(heads, sorted.filter(f => prod.has(f)).map(row));
-    if (unprod.length) {
-      h += '<details><summary class="desc">' + unprod.length + ' gold features the map cannot produce: ' + esc(unprod.join(', ')) +
-        '</summary>' + table(heads, unprod.map(row)) + '</details>';
-    }
-    const KINDS = [['value_mismatch', 'disagreements'], ['layer_mismatch', 'disagreements'], ['overgeneration', 'disagreements'],
-                   ['producible', 'misses'], ['unproducible', 'misses']];
-    h += '<h2>Error kinds</h2><p class="desc">Pair counts per kind; the layer column shows how much precision would be recovered by producing layered features.</p>' +
-      table(['treebank', ['TP', 'num']].concat(KINDS.map(([k, src]) => [(src === 'misses' ? 'missed ' : '') + k.replace('_mismatch', ''), 'num'])),
-        goldNames.map(n => '<tr><td><a href="' + link(n, 'errors') + '">' + esc(n) + '</a></td><td class="num">' + RS[n].support.pairs.tp + '</td>' +
-          KINDS.map(([k, src]) => '<td class="num">' + sum(((RS[n][src] || {})[k])) + '</td>').join('') + '</tr>'));
-    return h;
+    const rowsB = goldNames.map(n => {
+      const lm = (RS[n].disagreements || {}).layer_mismatch || {}, fp = RS[n].support.pairs.fp;
+      const byLayer = {};
+      Object.entries(lm).forEach(([k, c]) => { const g = (k.split('→ ')[1] || '').split('=')[0]; byLayer[g] = (byLayer[g] || 0) + c; });
+      const total = sum(byLayer);
+      if (!total) return '';
+      return '<tr><td><a href="' + link(n, { tab: 'errors' }) + '">' + esc(n) + '</a></td><td class="num">' + fp + '</td><td class="num">' + total +
+        '</td><td class="num">' + pct(fp ? total / fp : null) + '</td><td>' +
+        Object.entries(byLayer).sort((x, y) => y[1] - x[1]).map(([g, c]) => fc(esc(g) + ' ' + c)).join('') + '</td></tr>';
+    }).filter(Boolean);
+    return '<h2>Conflicting labels</h2>' + table([
+        ['feature', '', 'UD feature that two labels on one word gave different values for'],
+        ['words', 'num', 'Words with the conflict, all treebanks'],
+        ['treebanks', 'num', 'Number of treebanks with the conflict'],
+        ['where', '', 'Most affected treebanks; links open their conflicts'],
+        ['gold layers on those words', '', 'Gold features with this base name on the conflicting words'],
+        ['value combinations', '', 'Most frequent conflicting values; hover "+N more" for the rest'],
+      ], rowsA) +
+      '<h2>Layer mismatches</h2>' + table([
+        ['treebank', '', 'Gold treebank; links to its Errors tab'],
+        ['FP', 'num', 'Predicted pairs not in gold'],
+        ['layer', 'num', 'Of those, pairs whose value gold has on a layered feature'],
+        ['share of FP', 'num', 'Precision a layering rule could recover'],
+        ['by layered feature', '', 'Gold layered features involved'],
+      ], rowsB);
   }
 
   buildTabs([
     { id: 'overview', label: 'Overview', render: overview },
-    { id: 'labels', label: 'Labels', render: labels, after: sec => { const th = sec.querySelector('#x-labels thead th:nth-child(4)'); if (th) th.click(); } },
-    { id: 'problems', label: 'Problems', render: problems, after: problemsAfter },
-    { id: 'features', label: 'Features', render: features },
+    { id: 'unmapped', label: 'Unmapped labels', render: unmappedTab },
+    { id: 'lowagree', label: 'Low agreement', render: lowAgreeTab, after: lowAgreeAfter, hidden: !goldNames.length },
+    { id: 'conflicts', label: 'Conflicts', render: conflictsTab },
   ]);
+}
+
+// ---------------------------------------------------------------- tooltips
+
+// Custom tooltips for every element with a title: native title tooltips do not
+// show reliably in all browsers. The title moves to data-tip on first hover so
+// the native one is suppressed.
+function initTooltips() {
+  const tip = document.createElement('div');
+  tip.id = 'tip';
+  tip.hidden = true;
+  document.body.appendChild(tip);
+  let cur = null;
+  const place = ev => {
+    const pad = 12, r = tip.getBoundingClientRect();
+    let x = ev.clientX + pad, y = ev.clientY + pad;
+    if (x + r.width > window.innerWidth - 4) x = Math.max(4, ev.clientX - r.width - pad);
+    if (y + r.height > window.innerHeight - 4) y = Math.max(4, ev.clientY - r.height - pad);
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+  };
+  document.addEventListener('mouseover', ev => {
+    const el = ev.target.closest('[title], [data-tip]');
+    if (el && el.hasAttribute('title')) {
+      if (el.title) el.dataset.tip = el.title;
+      el.removeAttribute('title');
+    }
+    cur = el && el.dataset.tip ? el : null;
+    tip.hidden = !cur;
+    if (cur) { tip.textContent = cur.dataset.tip; place(ev); }
+  });
+  document.addEventListener('mousemove', ev => { if (cur) place(ev); });
+  document.addEventListener('mouseout', ev => {
+    if (cur && !cur.contains(ev.relatedTarget)) { cur = null; tip.hidden = true; }
+  });
+  document.addEventListener('scroll', () => { tip.hidden = true; cur = null; }, true);
 }
 
 // ================================================================= boot
 
 document.addEventListener('DOMContentLoaded', () => {
   makeSortable(document);
+  initTooltips();
   if (!HAS_DATA) return;
-  if (DATA.page === 'treebank') treebankPage(); else allPage();
+  if (DATA.page === 'treebank') treebankPage(); else indexPage();
 
   document.addEventListener('click', ev => {
     const el = ev.target.closest('[data-k]');
     if (el) { openPanel(el.dataset.k, el.dataset.l || el.dataset.k, el); return; }
     const t = ev.target.closest('[data-goto]');
     if (t) {
-      showTab(t.dataset.goto);
-      const d = document.querySelector('details[data-stage="' + t.dataset.stage + '"]');
-      if (d) { d.open = true; d.scrollIntoView({ behavior: 'smooth' }); }
+      if (t.dataset.stage && gotoStage) gotoStage(t.dataset.stage); else showTab(t.dataset.goto);
     }
   });
   const close = document.getElementById('panel-close');
@@ -564,7 +691,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const ex = p.get('ex');
   if (ex && DATA.ex) {
     const el = Array.from(document.querySelectorAll('[data-k]')).find(e => e.dataset.k === ex);
-    const label = el ? el.dataset.l : ex.replace(/^(vcm?)\|([^|]+)\|([^|]+)\|(.*)$/, '$2: gold $3 → pred $4').replace(/^[a-z]+\|/, '');
+    const label = el ? el.dataset.l : ex.replace(/^[a-z]+\|/, '').replace('|', ': ');
     openPanel(ex, label, el);
   }
 });
