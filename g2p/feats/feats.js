@@ -218,10 +218,11 @@ function renderSent(sid, ids) {
        '<tr class="p"><th title="Gold UPOS · UPOS implied by a gloss label (e.g. CVB → VERB)">UPOS · gloss UPOS</th>' +
        '<th title="Gloss labels found, as written → resolved label. Colour shows how far mapping got; hover a chip for details">labels</th>' +
        '<th title="FEATS mapped from the labels.' + (gold ? ' Red: not in gold.' : '') + ' Dashed outline: two labels gave different values">pred FEATS</th></tr></thead>';
-  for (const [id, form, upos, gupos, gloss, labels, g, p, conflicts] of sent.rows) {
+  for (const [id, form, upos, gupos, gloss, labels, g, p, conflicts, gdeprel] of sent.rows) {
     const gp = featPairs(g), pp = featPairs(p);
     const hl = ids.has(id) ? ' hl' : '';
-    const pos = esc(upos) + (gupos ? ' · <span class="gupos" title="UPOS implied by a gloss label">' + esc(gupos) + '</span>' : '');
+    const pos = esc(upos) + (gupos ? ' · <span class="gupos" title="UPOS implied by a gloss label">' + esc(gupos) + '</span>' : '') +
+      (gdeprel ? ' · <span class="gupos" title="DEPREL assigned by a gloss label (direct UD map)">' + esc(gdeprel) + '</span>' : '');
     h += '<tbody class="tok' + hl + '">' +
          '<tr class="g"><td class="id" rowspan="2">' + esc(id) + '</td><td>' + esc(form) + '</td><td class="brk">' + breakable(gloss) +
          '</td><td class="brk">' + (gold ? renderFeats(g, pp, 'fn') : '') + '</td></tr>' +
@@ -324,25 +325,28 @@ function treebankPage() {
       const st = s.problem || 'mapped';
       const agree = gold && s.pairs ? s.agree / s.pairs : null;
       const layer = gold && s.pairs ? s.layer_agree / s.pairs : null;
-      return '<tr data-c="' + st + '" data-f="' + esc((l + ' ' + Object.keys(s.raw).join(' ') + ' ' + (s.ud || '') + ' ' + (s.um_tag || '')).toLowerCase()) + '">' +
+      return '<tr data-c="' + st + '" data-f="' + esc((l + ' ' + Object.keys(s.raw).join(' ') + ' ' + (s.ud || '') + ' ' + (s.um_tag || '') + ' ' + (s.source || '') + ' ' + (s.deprel || '')).toLowerCase()) + '">' +
         '<td class="mono">' + esc(l) + '</td><td class="num">' + cnt('label|' + l, s.count, 'label ' + l) + '</td>' +
         '<td>' + chip(st, st) + '</td><td class="mono note">' + rawForms(s.raw, l) + '</td><td>' + esc(Object.keys(s.via).join(', ')) + '</td>' +
-        '<td class="mono">' + esc(s.um_tag || '') + '</td><td class="mono">' + esc(s.ud) + '</td><td>' + esc(s.upos || '') + '</td>' +
+        '<td class="mono">' + esc(s.source || '') + '</td>' +
+        '<td class="mono">' + esc(s.um_tag || '') + '</td><td class="mono">' + esc(s.ud) + '</td><td>' + esc(s.upos || '') + '</td><td>' + esc(s.deprel || '') + '</td>' +
         (gold ? '<td data-v="' + (agree == null ? '' : agree) + '">' + bar(agree) + '</td><td class="num" data-v="' + (layer == null ? '' : layer) + '">' + pct(layer) + '</td>' : '') +
         '<td class="note">' + esc(s.note) + '</td></tr>';
     });
     const heads = [
-      ['label', '', 'Canonical gloss label (the key in the gloss-to-UM map, or the label as written if unknown)'],
+      ['label', '', 'Canonical gloss label (the key in a gloss label map, or the label as written if unknown)'],
       ['count', 'num', 'Occurrences; click for example sentences'],
       ['status', '', 'How far mapping got for this label'],
       ['as written', '', 'Spellings in the data that resolved to this label, with counts'],
       ['via', '', 'How the written form resolved: exact / upper (case-folded) / fused (3SG) / non (N- prefix) / classnum (LOC2) / udname (3Sing)'],
+      ['map', '', 'Map the label is in: leipzig_um / leipzig_unmappable / extra_um / extra_unmappable / direct_ud (udname: resolved from a UD value name)'],
       ['UM tag', '', 'UniMorph tag from the gloss-to-UM map'],
-      ['UD', '', 'UD features from the UM-to-UD map'],
+      ['UD', '', 'UD features from the UM-to-UD map, or as written in the direct UD map'],
       ['UPOS', '', 'UPOS implied by the label, if any'],
+      ['DEPREL', '', 'DEPREL assigned by the direct UD map, if any (written to MISC GlossDeprel)'],
     ].concat(gold ? [['agree', 'num', 'Share of the Feat=Val pairs this label produced that appear in gold FEATS'],
                      ['layer', 'num', 'Share found in gold only on a layered feature, e.g. Person[psor]']] : [])
-      .concat([['note', '', 'Note from the gloss-to-UM map, or the UM category for UM-to-UD problems']]);
+      .concat([['note', '', 'Note from the label map, or the UM category for UM-to-UD problems']]);
     return       filterBar('labels-tbl', [['mapped']].concat(STAGES.filter(s => s !== 'conflict').map(s => [s])), 'filter labels, forms, UD…') +
       '<div id="labels-tbl">' + table(heads, rows) + '</div>';
   }
