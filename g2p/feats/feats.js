@@ -194,10 +194,13 @@ function renderFeats(s, other, cls, conflicts) {
 function breakable(s) { return esc(s).replace(/([-.=])/g, '$1<wbr>'); }
 function labelChips(labels) {
   const notes = DATA.notes || {};
-  return labels.map(([raw, label, problem]) => {
+  return labels.map(([raw, label, problem, layer, role]) => {
     const st = problem || 'mapped';
     const note = notes[st + '|' + label];
-    return chip(st, raw === label ? label : raw + ' → ' + label, st + (note ? ': ' + note : ''));
+    const text = (raw === label ? label : raw + ' → ' + label) + (role ? ' ⇒[' + role + ']' : layer ? ' [' + layer + ']' : '');
+    const why = role ? 'role marker: puts the neighbouring person/number on layer [' + role + ']'
+      : st + (note ? ': ' + note : '') + (layer ? '; person/number on layer [' + layer + ']' : '');
+    return chip(st, text, why);
   }).join('');
 }
 // Two rows per token, sharing the ID cell: the input on top (FORM, Gloss,
@@ -244,7 +247,8 @@ function treebankPage() {
       tile(pct(R.label_mapped), 'labels mapped (' + M.mapped_labels + ' / ' + M.labels + ')');
     if (gold) {
       h += tile(pct(R.precision), 'precision') + tile(pct(R.recall), 'recall') + tile(pct(R.f1), 'F1') +
-           tile(pct(R.r_f1), 'F1, producible features only') + tile(pct(R.exact), 'exact FEATS match') +
+           tile(pct(R.r_f1), 'F1, producible features only') +
+           tile(pct(R.b_f1), 'F1, ignoring layers (Person[obj] = Person[p] = Person)') + tile(pct(R.exact), 'exact FEATS match') +
            tile(pct(R.exact_labelled), 'exact match, glossed tokens');
     } else {
       h += tile('n/a – no gold FEATS', 'precision / recall / F1', ' na');
@@ -488,22 +492,22 @@ function indexPage() {
         '<td class="num">' + pct(m.aligned_tokens ? m.labelled_tokens / m.aligned_tokens : null) + '</td>' +
         '<td class="num">' + pct(m.aligned_tokens && m.gold_feat_tokens != null ? m.gold_feat_tokens / m.aligned_tokens : null) + '</td>' +
         '<td class="num">' + pct(m.aligned_tokens && m.pred_feat_tokens != null ? m.pred_feat_tokens / m.aligned_tokens : null) + '</td>' +
-        '<td style="min-width:180px">' + stack + '</td><td class="num">' + pct(R.label_mapped) + '</td>' + ['precision', 'recall', 'f1', 'r_f1', 'exact', 'exact_labelled'].map(sc).join('') + '</tr>';
+        '<td style="min-width:180px">' + stack + '</td><td class="num">' + pct(R.label_mapped) + '</td>' + ['precision', 'recall', 'f1', 'r_f1', 'b_f1', 'exact', 'exact_labelled'].map(sc).join('') + '</tr>';
     });
     // micro averages over gold treebanks
-    const t = { tp: 0, fp: 0, fn: 0, rtp: 0, rfp: 0, rfn: 0, ex: 0, tok: 0, exl: 0, lab: 0 };
+    const t = { tp: 0, fp: 0, fn: 0, rtp: 0, rfp: 0, rfn: 0, btp: 0, bfp: 0, bfn: 0, ex: 0, tok: 0, exl: 0, lab: 0 };
     goldNames.forEach(n => {
       const s = RS[n].support;
-      ['tp', 'fp', 'fn'].forEach(k => { t[k] += s.pairs[k]; t['r' + k] += s.restricted[k]; });
+      ['tp', 'fp', 'fn'].forEach(k => { t[k] += s.pairs[k]; t['r' + k] += s.restricted[k]; t['b' + k] += (s.layer_insensitive || s.pairs)[k]; });
       t.ex += s.exact.correct; t.tok += s.exact.total; t.exl += s.exact_labelled.correct; t.lab += s.exact_labelled.total;
     });
     const prf = (a, b, c) => { const P = a + b ? a / (a + b) : null, Rc = a + c ? a / (a + c) : null; return [P, Rc, P && Rc ? 2 * P * Rc / (P + Rc) : null]; };
-    const [mp, mr, mf] = prf(t.tp, t.fp, t.fn), rf = prf(t.rtp, t.rfp, t.rfn)[2];
+    const [mp, mr, mf] = prf(t.tp, t.fp, t.fn), rf = prf(t.rtp, t.rfp, t.rfn)[2], bf = prf(t.btp, t.bfp, t.bfn)[2];
     const foot = '<tfoot><tr><td>micro avg</td><td class="note">scores: gold treebanks only</td><td></td><td class="num">' + toks +
       '</td><td class="num">' + pct(toks ? names.reduce((x, n) => x + RS[n].meta_summary.labelled_tokens, 0) / toks : null) + '</td>' + ['gold_feat_tokens', 'pred_feat_tokens'].map(k =>
         '<td class="num">' + pct(toks ? names.reduce((x, n) => x + (RS[n].meta_summary[k] || 0), 0) / toks : null) + '</td>').join('') +
       '<td></td><td class="num">' + pct(labs ? mappedN / labs : null) + '</td>' +
-      [mp, mr, mf, rf, t.tok ? t.ex / t.tok : null, t.lab ? t.exl / t.lab : null].map(v => '<td class="num">' + pct(v) + '</td>').join('') + '</tr></tfoot>';
+      [mp, mr, mf, rf, bf, t.tok ? t.ex / t.tok : null, t.lab ? t.exl / t.lab : null].map(v => '<td class="num">' + pct(v) + '</td>').join('') + '</tr></tfoot>';
     const heads = [['name', '', 'Mapped corpus; links to its page'], ['treebank', '', 'Gold treebank'],
       ['sents', 'num', 'Evaluated sentences / total in gold'], ['tokens', 'num', 'Evaluated tokens'],
       ['glossed', 'num', 'Share of tokens with at least one gloss label'],
@@ -512,6 +516,7 @@ function indexPage() {
       ['mapped', 'num', 'Share of gloss labels that reached a UD feature'],
       ['P', 'num', 'Precision of Feat=Val pairs'], ['R', 'num', 'Recall of Feat=Val pairs'], ['F1', 'num', 'F1 of Feat=Val pairs'],
       ['rF1', 'num', 'F1 restricted to features the gloss-to-UM map can produce'],
+      ['lF1', 'num', 'F1 ignoring feature layers (Person[obj]=3 matches Person[p]=3 or Person=3)'],
       ['exact', 'num', 'Tokens whose FEATS match gold exactly'], ['exact (glossed)', 'num', 'Exact match among tokens with gloss labels']];
     return h + '<h2>Treebanks</h2>' + table(heads, rows).replace('</tbody></table>', '</tbody>' + foot + '</table>');
   }
