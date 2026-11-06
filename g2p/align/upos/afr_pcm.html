@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>UPOS &mdash; pcm_train.conllu</title>
+<style>
+* { box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
+#hdr { padding: 8px 16px; background: #2c3e50; color: #fff; flex-shrink: 0; position: relative; }
+#hdr h1 { margin: 0; font-size: 1.1em; }
+#hdr a.back { position: absolute; top: 8px; right: 16px; color: #cfe3f2; font-size: 0.85em; text-decoration: none; }
+#hdr a.back:hover { text-decoration: underline; }
+#stats { margin: 2px 0 0; font-size: 0.8em; opacity: 0.8; }
+#matrix-section { padding: 12px 16px; overflow-x: auto; }
+#sentences-section { padding: 12px 16px; border-top: 2px solid #bbb; }
+#sel-hdr { font-weight: bold; margin-bottom: 10px; color: #2c3e50; min-height: 1.4em; }
+#placeholder { color: #aaa; font-style: italic; padding: 40px; text-align: center; }
+table { border-collapse: collapse; font-size: 0.75em; }
+th { background: #ecf0f1; position: sticky; top: 0; z-index: 1; padding: 4px 6px; border: 1px solid #bbb; }
+th.rh { text-align: left; position: sticky; left: 0; z-index: 2; }
+th.col-label { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; vertical-align: bottom; height: 120px; padding: 4px 2px; text-align: left; }
+td { padding: 3px 8px; border: 1px solid #ddd; text-align: right; min-width: 36px; font-variant-numeric: tabular-nums; }
+td.diag { background: #f0f0f0; color: #999; }
+td.click { cursor: pointer; }
+td.click:hover { filter: brightness(0.88); }
+td.sel { outline: 2px solid #2980b9; outline-offset: -2px; }
+.pair { margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
+.pair-id { background: #f8f8f8; padding: 3px 10px; font-size: 0.82em; color: #555; border-bottom: 1px solid #ddd; font-family: monospace; }
+.pair-id a { color: #2980b9; text-decoration: underline; font-size: 1.1em; }
+.pair-id a:hover { color: #1a5276; }
+.sent-comments { font-family: monospace; font-size: 0.73em; color: #555; padding: 3px 8px; border-bottom: 1px solid #eee; }
+.sent-tbl { width: 100%; border-collapse: collapse; font-size: 0.72em; font-family: monospace; }
+.sent-tbl th, .sent-tbl td { padding: 2px 6px; border: 1px solid #ddd; text-align: left; white-space: nowrap; }
+.sent-tbl th { background: #ecf0f1; font-family: system-ui, sans-serif; }
+.sent-tbl th.pred-col, .sent-tbl td.pred-col { background: #eaf4fb; }
+.sent-tbl th:nth-child(4), .sent-tbl td:nth-child(4),
+.sent-tbl th:nth-child(10), .sent-tbl td:nth-child(10),
+.sent-tbl th:nth-child(13), .sent-tbl td:nth-child(13) { border-left: 2px solid #aaa; }
+.sent-tbl th:nth-child(6), .sent-tbl td:nth-child(6),
+.sent-tbl th:nth-child(8), .sent-tbl td:nth-child(8) { border-left: 1.5px solid #aaa; }
+tr.hl-line td { background: #fffbcc !important; }
+tr.hl-line td.pred-col { background: #fff5a0 !important; }
+.sent-tbl td.mismatch { background: #fde8e8; }
+</style>
+</head>
+<body>
+<div id="hdr">
+  <a class="back" href="../index.html">&larr; Index</a>
+  <h1>pcm_train.conllu</h1>
+  <div id="stats">7 sents &middot; 132 tokens &middot; UPOS 64.4% &middot; UAS 43.2% &middot; LAS 33.3% &middot; CLAS 29.3% &middot; CORELAS 34.0% &middot; DEPREL 47.0%</div>
+</div>
+<div id="matrix-section"><table id="tbl"></table></div>
+<div id="sentences-section">
+  <div id="sel-hdr"></div>
+  <div id="list"><div id="placeholder">Click a confusion cell to see examples</div></div>
+</div>
+<script>
+const M = {"ADJ":{"ADJ":1,"DET":1,"PRON":1},"ADP":{"ADP":3,"ADV":1,"PART":2,"PUNCT":1},"ADV":{"ADP":1,"ADV":1},"AUX":{"AUX":5,"DET":2,"PART":2,"PRON":1,"SCONJ":1,"VERB":2},"CCONJ":{"CCONJ":4},"DET":{"DET":5,"PRON":1},"NOUN":{"ADP":1,"AUX":1,"NOUN":15,"PROPN":3},"NUM":{"DET":2,"NUM":1,"PRON":1},"PART":{"DET":1,"PART":2},"PRON":{"AUX":1,"DET":1,"PRON":9,"PUNCT":1,"VERB":1},"PROPN":{"PROPN":5},"PUNCT":{"PUNCT":12},"SCONJ":{"ADJ":1,"ADV":1,"DET":2,"PRON":3,"SCONJ":1},"VERB":{"ADJ":2,"AUX":5,"DET":1,"NOUN":1,"PRON":1,"SCONJ":1,"VERB":21}};
+const S = {"ADP→PART":[["Masakhane-Nigerian Pidgin_train_7",["5"]],["Masakhane-Nigerian Pidgin_train_9",["1"]]],"ADP→PUNCT":[["Masakhane-Nigerian Pidgin_train_1",["15"]]],"ADP→ADV":[["Masakhane-Nigerian Pidgin_train_8",["19"]]],"VERB→AUX":[["Masakhane-Nigerian Pidgin_train_11",["11"]],["Masakhane-Nigerian Pidgin_train_5",["7"]],["Masakhane-Nigerian Pidgin_train_7",["6"]],["Masakhane-Nigerian Pidgin_train_8",["7"]],["Masakhane-Nigerian Pidgin_train_9",["6"]]],"VERB→DET":[["Masakhane-Nigerian Pidgin_train_1",["1"]]],"VERB→NOUN":[["Masakhane-Nigerian Pidgin_train_1",["11"]]],"VERB→SCONJ":[["Masakhane-Nigerian Pidgin_train_1",["31"]]],"VERB→ADJ":[["Masakhane-Nigerian Pidgin_train_4",["23","25"]]],"VERB→PRON":[["Masakhane-Nigerian Pidgin_train_5",["2"]]],"ADJ→PRON":[["Masakhane-Nigerian Pidgin_train_9",["7"]]],"ADJ→DET":[["Masakhane-Nigerian Pidgin_train_1",["29"]]],"NUM→PRON":[["Masakhane-Nigerian Pidgin_train_9",["8"]]],"NUM→DET":[["Masakhane-Nigerian Pidgin_train_1",["5"]],["Masakhane-Nigerian Pidgin_train_9",["14"]]],"NOUN→ADP":[["Masakhane-Nigerian Pidgin_train_9",["9"]]],"NOUN→PROPN":[["Masakhane-Nigerian Pidgin_train_1",["14","18"]],["Masakhane-Nigerian Pidgin_train_4",["2"]]],"NOUN→AUX":[["Masakhane-Nigerian Pidgin_train_8",["2"]]],"ADV→ADP":[["Masakhane-Nigerian Pidgin_train_9",["11"]]],"AUX→VERB":[["Masakhane-Nigerian Pidgin_train_11",["3"]],["Masakhane-Nigerian Pidgin_train_5",["6"]]],"AUX→PART":[["Masakhane-Nigerian Pidgin_train_11",["10"]],["Masakhane-Nigerian Pidgin_train_4",["17"]]],"AUX→DET":[["Masakhane-Nigerian Pidgin_train_1",["8"]],["Masakhane-Nigerian Pidgin_train_4",["10"]]],"AUX→PRON":[["Masakhane-Nigerian Pidgin_train_4",["15"]]],"AUX→SCONJ":[["Masakhane-Nigerian Pidgin_train_4",["21"]]],"SCONJ→PRON":[["Masakhane-Nigerian Pidgin_train_1",["6"]],["Masakhane-Nigerian Pidgin_train_11",["8"]],["Masakhane-Nigerian Pidgin_train_4",["8"]]],"SCONJ→ADV":[["Masakhane-Nigerian Pidgin_train_1",["25"]]],"SCONJ→DET":[["Masakhane-Nigerian Pidgin_train_4",["14"]],["Masakhane-Nigerian Pidgin_train_5",["4"]]],"SCONJ→ADJ":[["Masakhane-Nigerian Pidgin_train_4",["20"]]],"DET→PRON":[["Masakhane-Nigerian Pidgin_train_1",["4"]]],"PRON→DET":[["Masakhane-Nigerian Pidgin_train_1",["30"]]],"PRON→PUNCT":[["Masakhane-Nigerian Pidgin_train_8",["8"]]],"PRON→VERB":[["Masakhane-Nigerian Pidgin_train_5",["1"]]],"PRON→AUX":[["Masakhane-Nigerian Pidgin_train_5",["5"]]],"PART→DET":[["Masakhane-Nigerian Pidgin_train_7",["2"]]]};
+const SENTS = {"Masakhane-Nigerian Pidgin_train_7":{"comments":["# sent_id = Masakhane-Nigerian Pidgin_train_7","# text = We neva see reasin to take impeach di president .","# text_en = We have seen no reason to impeach the president"],"rows":[["1","We","We","PRON","PRON","3","3","nsubj","nsubj","We","they","NOM.PL.3","Case=Nom|Number=Plur|Person=1|PronType=Prs"],["2","neva","neva","PART","DET","3","4","advmod","det","no","never","never","PronType=Neg"],["3","see","see","VERB","VERB","0","0","root","root","seen","see","see","_"],["4","reasin","reason","NOUN","NOUN","3","3","obj","obj","reason","reason","reason","_"],["5","to","to","ADP","PART","6","7","mark","mark","to","to","to","_"],["6","take","take","VERB","AUX","4","3","acl","aux","have","use","use","_"],["7","impeach","impeach ","VERB","VERB","6","4","compound:svc","acl","impeach","impeach","impeach","_"],["8","di","di","DET","DET","9","9","det","det","the","the","DEF.ART","Definite=Def|PronType=Art"],["9","president","president","NOUN","NOUN","7","7","obj","obj","president","president","president","_"],["10",".",".","PUNCT","PUNCT","3","3","punct","punct",".","PUNCT","PUNCT","_"]]},"Masakhane-Nigerian Pidgin_train_9":{"comments":["# sent_id = Masakhane-Nigerian Pidgin_train_9","# text = To impeach di president no be wetin one pesin go just wake up one day and begin tok .","# text_en = To impeach the president is not what one would wake up in a day and start talking about"],"rows":[["1","To","To","ADP","PART","2","2","mark","mark","To","To","To","_"],["2","impeach","impeach","VERB","VERB","6","7","ccomp","csubj","impeach","impeach","impeach","_"],["3","di","di","DET","DET","4","4","det","det","the","the","DEF.ART","Definite=Def|PronType=Art"],["4","president","president","NOUN","NOUN","2","2","obj","obj","president","president","president","_"],["5","no","no","PART","PART","6","7","advmod","advmod","not","not","NEG","PronType=Neg"],["6","be","be","VERB","AUX","0","7","root","cop","is","COP","COP","_"],["7","wetin","wetin","ADJ","PRON","6","0","xcomp","root","what","what","what","_"],["8","one","one","NUM","PRON","9","12","nummod","nsubj","one","one","one","_"],["9","pesin","pesin","NOUN","ADP","10","15","nsubj","case","in","person","person","Number=Sing"],["10","go","go","AUX","AUX","7","12","ccomp","aux","would","will","FUT","Tense=Fut"],["11","just","just","ADV","ADP","12","18","advmod","obl","about","just","just","_"],["12","wake","wake","VERB","VERB","10","7","ccomp","acl:relcl","wake","wake","wake","Tense=Pres"],["13","up","up","ADP","ADP","12","12","compound:prt","compound:prt","up","up","up","_"],["14","one","one","NUM","DET","15","15","nummod","det","a","one","one","_"],["15","day","day","NOUN","NOUN","12","12","obl:mod","obl","day","day","day","_"],["16","and","and","CCONJ","CCONJ","17","17","cc","cc","and","and","and","_"],["17","begin","begin","VERB","VERB","18","12","compound:svc","conj","start","begin","begin","_"],["18","tok","tok","VERB","VERB","12","17","conj","xcomp","talking","say","say","Tense=Pres"],["19",".",".","PUNCT","PUNCT","6","7","punct","punct",".","PUNCT","PUNCT","_"]]},"Masakhane-Nigerian Pidgin_train_1":{"comments":["# sent_id = Masakhane-Nigerian Pidgin_train_1","# text = Di senator tok dis one wen im be pay Salah visit to former govnor for inside Oyo state , Rashidi Ladoja , he tok say e get process wey dem take impeach president .","# text_en = The senator said this when he paid a Salah visit to the former Governor Rashidi Ladoja,  in Oyo State. He said there are processes in impeaching the president"],"rows":[["1","Di","Di","VERB","DET","2","2","det","det","The","the","DEF.ART","Definite=Def|PronType=Art"],["2","senator","senator","NOUN","NOUN","3","3","nsubj","nsubj","senator","senator","senator","_"],["3","tok","tok","VERB","VERB","0","0","root","root","said","say","say","Tense=Past"],["4","dis","dis","DET","PRON","5","3","det","obj","this","SG","SG.DEM","Number=Sing|PronType=Dem"],["5","one","one","NUM","DET","3","20","obj","det","the","one","one","_"],["6","wen","wen","SCONJ","PRON","9","3","mark","obj","this","REL","REL","PronType=Rel"],["7","im","im","PRON","PRON","9","9","nsubj","nsubj","he","he","NOM.SG.3 (he)","Case=Nom|Number=Sing|Person=3|PronType=Prs"],["8","be","be","AUX","DET","9","11","aux","det","a","was","PST","Tense=Past"],["9","pay","pay","VERB","VERB","3","24","acl:relcl","advcl","paid","pay","pay","Tense=Past"],["10","Salah","Salah","PROPN","PROPN","11","11","obl:mod","compound","Salah","sallah","sallah","_"],["11","visit","visit","VERB","NOUN","9","9","ccomp","obj","visit","visit","visit","_"],["12","to","to","ADP","ADP","14","20","case","case","to","to","to","_"],["13","former","former","ADJ","ADJ","14","14","amod","amod","former","former","former","_"],["14","govnor","govnor","NOUN","PROPN","11","20","obl:mod","nmod:desc","Governor","governor","governor","_"],["15","for","for","ADP","PUNCT","17","18","case","punct",",","in","in","_"],["16","inside","inside","ADP","ADP","17","18","dep","case","in","in","in","_"],["17","Oyo","Oyo","PROPN","PROPN","14","18","nmod","compound","Oyo","Oyo","Oyo","_"],["18","state","state","NOUN","PROPN","17","20","flat","nmod","State","State","State","_"],["19",",",",","PUNCT","PUNCT","20","18","punct","punct","Oyo","PUNCT","PUNCT","_"],["20","Rashidi","Rashidi","PROPN","PROPN","14","11","appos","nmod","Rashidi","Rashidi","Rashidi","_"],["21","Ladoja","Ladoja","PROPN","PROPN","20","20","flat","flat","Ladoja","Ladoja","Ladoja","_"],["22",",",",","PUNCT","PUNCT","23","24","punct","punct","he","PUNCT","PUNCT","_"],["23","he","he","PRON","PRON","24","24","nsubj","nsubj","he","he","NOM.SG.3 (he)","Case=Nom|Number=Sing|Person=3|PronType=Prs"],["24","tok","tok","VERB","VERB","9","3","ccomp","parataxis","said","say","say","Tense=Past"],["25","say","say","SCONJ","ADV","27","9","mark","advmod","when","withP","COMP","_"],["26","e","e","PRON","PRON","27","27","nsubj","expl","there","it","NOM.SG.3 (it)","Case=Nom|Number=Sing|Person=3|PronType=Prs"],["27","get","get","VERB","VERB","24","24","ccomp","ccomp","are","have","have","_"],["28","process","process","NOUN","NOUN","27","27","obj","nsubj","processes","process","process","_"],["29","wey","wey","ADJ","DET","28","33","acl:relcl","det","the","REL","REL","PronType=Rel"],["30","dem","dem","PRON","DET","31","33","nsubj","det","the","they","they","Number=Plur|Person=3|PronType=Prs"],["31","take","take","VERB","SCONJ","29","32","ccomp","mark","in","use","use","_"],["32","impeach","impeach","VERB","VERB","31","28","ccomp","acl","impeaching","impeach","impeach","_"],["33","president","president","NOUN","NOUN","32","32","obj","obj","president","president","president","_"],["34",".",".","PUNCT","PUNCT","3","3","punct","punct",".","PUNCT","PUNCT","_"]]},"Masakhane-Nigerian Pidgin_train_8":{"comments":["# sent_id = Masakhane-Nigerian Pidgin_train_8","# text = If need dey , we go table am , discuss am , and di two houses must kom togeda .","# text_en = We will discuss it If there need be, and the two houses must come together"],"rows":[["1","If","If","SCONJ","SCONJ","3","3","mark","mark","If","If","If","_"],["2","need","need","NOUN","AUX","3","3","nsubj","aux","need","need","need","_"],["3","dey","dey","VERB","VERB","7","10","advcl","advcl","be","be","be","_"],["4",",",",","PUNCT","PUNCT","3","3","punct","punct","there","PUNCT","PUNCT","_"],["5","we","we","PRON","PRON","7","10","nsubj","nsubj","We","I","NOM.PL.1","Case=Nom|Number=Plur|Person=1|PronType=Prs"],["6","go","go","AUX","AUX","7","10","aux","aux","will","will","FUT","Tense=Fut"],["7","table","table","VERB","AUX","0","3","root","aux","need","table","table","_"],["8","am","am","PRON","PUNCT","7","18","obj","punct",",","it","ACC.SG.3 (it)","Case=Acc|Number=Sing|Person=3|PronType=Prs"],["9",",",",","PUNCT","PUNCT","10","18","punct","punct",",","PUNCT","PUNCT","_"],["10","discuss","discuss","VERB","VERB","7","0","conj","root","discuss","discuss","discuss","_"],["11","am","am","PRON","PRON","10","10","obj","obj","it","it","ACC.SG.3 (it)","Case=Acc|Number=Sing|Person=3|PronType=Prs"],["12",",",",","PUNCT","PUNCT","18","16","punct","punct","two","PUNCT","PUNCT","_"],["13","and","and","CCONJ","CCONJ","18","18","mark","cc","and","and","and","_"],["14","di","di","DET","DET","16","16","det","det","the","the","DEF.ART","Definite=Def|PronType=Art"],["15","two","two","NUM","NUM","16","16","nummod","nummod","two","two","two.CARD","NumType=Card"],["16","houses","house","NOUN","NOUN","18","18","nsubj","nsubj","houses","houses","houses","_"],["17","must","must","AUX","AUX","18","18","aux","aux","must","must","must","_"],["18","kom","kom","VERB","VERB","7","10","conj","conj","come","come","come","Tense=Pres"],["19","togeda","togeda","ADP","ADV","18","18","dep","advmod","together","together","together","_"],["20",".",".","PUNCT","PUNCT","7","10","punct","punct",".","PUNCT","PUNCT","_"]]},"Masakhane-Nigerian Pidgin_train_11":{"comments":["# sent_id = Masakhane-Nigerian Pidgin_train_11","# text = Why you wan cause problem plus confusion wey you no fit solve ?","# text_en = Why do you want to cause problem and confusion that you can not solve"],"rows":[["1","Why","Why","ADV","ADV","4","3","advmod","advmod","Why","why","why","_"],["2","you","you","PRON","PRON","4","3","nsubj","nsubj","you","you","you","_"],["3","wan","wan","AUX","VERB","4","0","aux","root","want","want","want","_"],["4","cause","cause","VERB","VERB","0","3","root","xcomp","cause","cause","cause","_"],["5","problem","problem","NOUN","NOUN","4","4","obj","obj","problem","problem","problem","_"],["6","plus","plus","CCONJ","CCONJ","7","7","cc","cc","and","and","and","_"],["7","confusion","confusion","NOUN","NOUN","5","5","conj","conj","confusion","confusion","confusion","_"],["8","wey","hey","SCONJ","PRON","11","12","mark","obj","that","that","that","_"],["9","you","you","PRON","PRON","11","12","nsubj","nsubj","you","you","you","_"],["10","no","no","AUX","PART","11","12","aux","advmod","not","not","not","_"],["11","fit","fit","VERB","AUX","4","12","ccomp","aux","can","can","can","_"],["12","solve","solve","VERB","VERB","11","5","ccomp","acl:relcl","solve","solve","solve","_"],["13","?","?","PUNCT","PUNCT","4","4","punct","punct","to","punct","punct","_"]]},"Masakhane-Nigerian Pidgin_train_5":{"comments":["# sent_id = Masakhane-Nigerian Pidgin_train_5","# text = E get process wey dem dey take impeach president .","# text_en = There is a process that is required for a president to be impeached"],"rows":[["1","E","E","PRON","VERB","2","0","nsubj","root","is","it","NOM.SG.3 (it)","Case=Nom|Number=Sing|Person=3|PronType=Prs"],["2","get","get","VERB","PRON","0","1","root","expl","There","have","have","Tense=Pres"],["3","process","process","NOUN","NOUN","2","1","obj","nsubj","process","process","process","_"],["4","wey","wey","SCONJ","DET","8","3","mark","det","a","REL","REL","PronType=Rel"],["5","dem","dem","PRON","AUX","8","6","nsubj","aux:pass","is","they","NOM.PL.3 (they)","Case=Nom|Number=Plur|Person=3|PronType=Prs"],["6","dey","dey","AUX","VERB","8","3","aux","acl:relcl","required","PROG","PROG","Aspect=Prog"],["7","take","take","VERB","AUX","8","8","aux","aux:pass","be","use","use","_"],["8","impeach","impeach","VERB","VERB","2","6","ccomp","advcl","impeached","impeach","impeach","_"],["9","president","president","NOUN","NOUN","8","8","obj","nsubj:pass","president","president","president","_"],["10",".",".","PUNCT","PUNCT","2","9","punct","punct","a","PUNCT","PUNCT","_"]]},"Masakhane-Nigerian Pidgin_train_4":{"comments":["# sent_id = Masakhane-Nigerian Pidgin_train_4","# text = But Senator Buhari don tell di pipo wey want make di kontri break say make dem no create problem wey no go easy to solve .","# text_en = But Senator Buhari has told the people who want the country to break that they should not create an unsolvable problem."],"rows":[["1","But","But","CCONJ","CCONJ","5","5","cc","cc","But","But","But","_"],["2","Senator","senator","NOUN","PROPN","5","3","nsubj","nmod:desc","Senator","Senator","Senator","_"],["3","Buhari","Buhari","PROPN","PROPN","2","5","flat","nsubj","Buhari","Buhari","Buhari","_"],["4","don","be","AUX","AUX","5","5","aux","aux","has","PFV","PFV","Aspect=Perf"],["5","tell","tell","VERB","VERB","0","0","root","root","told","tell","tell","Tense=Past"],["6","di","di","DET","DET","7","7","det","det","the","the","DEF.ART","Definite=Def|PronType=Art"],["7","pipo","pipo","NOUN","NOUN","5","5","obj","iobj","people","people","people","Number=Plur"],["8","wey","wey","SCONJ","PRON","9","9","mark","nsubj","who","REL","REL","PronType=Rel"],["9","want","want","VERB","VERB","7","7","acl:relcl","acl:relcl","want","want","want","Tense=Pres"],["10","make","make","AUX","DET","13","12","aux","det","the","SBJV","SBJV","_"],["11","di","di","DET","DET","12","12","det","det","the","the","DEF.ART","Definite=Def|PronType=Art"],["12","kontri","kontri","NOUN","NOUN","13","9","nsubj","obj","country","country","country","_"],["13","break","break","VERB","VERB","9","9","xcomp","xcomp","break","break","break","_"],["14","say","say","SCONJ","DET","18","19","mark","det","an","withP","COMP","_"],["15","make","make","AUX","PRON","18","18","aux","nsubj","they","SBJV","SBJV","_"],["16","dem","dem","PRON","PRON","18","18","nsubj","nsubj","they","them","them","Number=Plur|Person=3"],["17","no","no ","AUX","PART","18","18","advcl","advmod","not","not","NEG","PronType=Neg"],["18","create","create","VERB","VERB","5","13","xcomp","ccomp","create","create","create","_"],["19","problem","problem","NOUN","NOUN","18","18","obj","obj","problem","problem","problem","_"],["20","wey","wey","SCONJ","ADJ","22","19","mark","amod","unsolvable","REL","REL","PronType=Rel"],["21","no","no","AUX","SCONJ","22","18","advcl","mark","that","not","NEG","PronType=Neg"],["22","go","go","AUX","AUX","19","18","acl:relcl","aux","should","will","FUT","Tense=Fut"],["23","easy","easy","VERB","ADJ","22","19","ccomp","amod","unsolvable","easy","easy","_"],["24","to","to","PART","PART","25","13","mark","mark","to","to","to","_"],["25","solve","solve","VERB","ADJ","23","19","ccomp","amod","unsolvable","solve","solve","_"],["26",".",".","PUNCT","PUNCT","5","5","punct","punct",".","PUNCT","PUNCT","_"]]}};
+const TREEBANK = "pcm_train.conllu";
+const labels = Object.keys(M).sort();
+const tbl = document.getElementById('tbl');
+
+let maxV = 1;
+for (const g of labels)
+  for (const p of labels)
+    if (g !== p && M[g] && M[g][p]) maxV = Math.max(maxV, M[g][p]);
+
+const hrow = tbl.insertRow();
+const corner = document.createElement('th');
+corner.className = 'rh';
+corner.textContent = 'gold \ pred';
+hrow.appendChild(corner);
+for (const p of labels) {
+  const th = document.createElement('th');
+  th.className = 'col-label';
+  th.textContent = p;
+  hrow.appendChild(th);
+}
+
+let sel = null;
+for (const g of labels) {
+  const row = tbl.insertRow();
+  const rh = document.createElement('th');
+  rh.className = 'rh';
+  rh.textContent = g;
+  row.appendChild(rh);
+  for (const p of labels) {
+    const td = row.insertCell();
+    const cnt = (M[g] && M[g][p]) || 0;
+    td.textContent = cnt || '';
+    if (g === p) {
+      td.className = 'diag';
+      td.title = cnt + ' correct';
+    } else if (cnt > 0) {
+      const t = cnt / maxV;
+      const ch = Math.round(255 * (1 - t * 0.8));
+      td.style.background = 'rgb(255,' + ch + ',' + ch + ')';
+      td.id = g + '--' + p;
+      td.className = 'click';
+      td.title = 'gold:' + g + ' → pred:' + p + ': ' + cnt;
+      td.addEventListener('click', (function(gl, pl, c, cell) {
+        return function() { show(gl, pl, c, cell); };
+      })(g, p, cnt, td));
+    }
+  }
+}
+
+function show(gL, pL, cnt, cell) {
+  history.replaceState(null, '', '#' + gL + '--' + pL);
+  if (sel) sel.classList.remove('sel');
+  cell.classList.add('sel');
+  sel = cell;
+  document.getElementById('sel-hdr').textContent =
+    'gold: ' + gL + '  →  pred: ' + pL + '  (' + cnt + ' sentence' + (cnt !== 1 ? 's' : '') + ')';
+  document.getElementById('sentences-section').scrollIntoView({ behavior: 'smooth' });
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  const corpus = (TREEBANK.startsWith('UD_') ? TREEBANK : 'UD_' + TREEBANK) + '@2.18';
+  const sents = S[gL + '→' + pL] || [];
+  for (const [sid, tids] of sents) {
+    const sent = SENTS[sid] || {};
+    const grewUrl = 'https://universal.grew.fr/?corpus=' + corpus +
+      '&request=' + encodeURIComponent('pattern { meta.sent_id = "' + sid + '" }');
+    const d = document.createElement('div');
+    d.className = 'pair';
+    d.innerHTML =
+      '<div class="pair-id"><a href="' + grewUrl + '" target="_blank">' + esc(sid) + '</a></div>' +
+      '<div style="overflow-x:auto">' + renderTable(sent.comments, sent.rows, tids) + '</div>';
+    list.appendChild(d);
+  }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+const HDRS = ['ID','FORM','LEMMA','UPOS','UPOS·p','HEAD','HEAD·p','DEPREL','DEPREL·p','AlignedToken','AlignGloss','Gloss','FEATS'];
+const PRED_COLS = new Set([4, 6, 8]);
+const PRED_GOLD = new Map([[4, 3], [6, 5], [8, 7]]);
+
+function renderTable(comments, rows, tokenIds) {
+  const ids = new Set(tokenIds || []);
+  let h = '';
+  if (comments && comments.length)
+    h += '<div class="sent-comments">' + comments.map(esc).join('<br>') + '</div>';
+  h += '<table class="sent-tbl"><thead><tr>';
+  HDRS.forEach((hdr, i) => {
+    h += '<th' + (PRED_COLS.has(i) ? ' class="pred-col"' : '') + '>' + esc(hdr) + '</th>';
+  });
+  h += '</tr></thead><tbody>';
+  for (const row of rows) {
+    const hl = ids.has(row[0]);
+    h += '<tr' + (hl ? ' class="hl-line"' : '') + '>';
+    row.forEach((cell, i) => {
+      const goldIdx = PRED_GOLD.get(i);
+      const mismatch = goldIdx !== undefined && cell !== row[goldIdx];
+      const cls = (PRED_COLS.has(i) ? 'pred-col' : '') + (mismatch ? ' mismatch' : '');
+      h += '<td' + (cls.trim() ? ' class="' + cls.trim() + '"' : '') + '>' + esc(cell) + '</td>';
+    });
+    h += '</tr>';
+  }
+  h += '</tbody></table>';
+  return h;
+}
+
+if (location.hash) {
+  const cell = document.getElementById(location.hash.slice(1));
+  if (cell) { cell.click(); cell.scrollIntoView({ behavior: 'instant', block: 'center' }); }
+}
+</script>
+</body>
+</html>

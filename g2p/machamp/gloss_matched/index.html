@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Gloss2Parse evaluation</title>
+<style>
+* { box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; margin: 0; }
+#hdr { padding: 8px 16px; background: #2c3e50; color: #fff; }
+#hdr h1 { margin: 0; font-size: 1.1em; }
+table { border-collapse: collapse; font-size: 0.9em; margin: 16px; }
+th { background: #ecf0f1; padding: 6px 12px; border: 1px solid #bbb; text-align: left; cursor: pointer; user-select: none; white-space: nowrap; }
+th:hover { background: #dde4e6; }
+th::after { content: '\2003'; opacity: 0.35; }
+th[data-sort="asc"]::after { content: ' \25B2'; opacity: 1; }
+th[data-sort="desc"]::after { content: ' \25BC'; opacity: 1; }
+td { padding: 5px 12px; border: 1px solid #ddd; }
+tr:hover td { background: #f5f5f5; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+tfoot td { font-weight: bold; border-top: 2px solid #bbb; background: #f0f4f6; }
+a { color: #2980b9; text-decoration: none; }
+a:hover { text-decoration: underline; }
+#hdr { display: flex; align-items: baseline; gap: 16px; }
+#hdr a { color: #cfe3f2; font-size: 0.85em; }
+</style>
+</head>
+<body>
+<div id="hdr"><h1>Gloss2Parse evaluation</h1><a href="../../index.html">&larr; Overview</a></div>
+<table><thead><tr><th title="Parsed corpus filename">pred_name</th><th title="UD treebank name">treebank</th><th title="Parsed sentences / total (from gold data)">sents</th><th title="Parsed tokens">tokens</th><th title="Universal POS label accuracy">UPOS</th><th title="Unlabeled attachment score">UAS</th><th title="Labeled attachment score">LAS</th><th title="Content LAS (excluding aux/case/cc/clf/conj/cop/det/mark/punct)">CLAS</th><th title="Core argument LAS (only ccomp/csubj/iobj/nsubj/obj/root/xcomp)">CoreLAS</th><th title="Dependency relation label accuracy (base type; subtypes collapsed)">deprel</th></tr></thead><tbody><tr><td>bej</td><td>Beja-Autogramm</td><td class="num">759/763</td><td class="num">11851</td><td class="num"><a href="upos/bej.html">68.0%</a></td><td class="num">42.0%</td><td class="num">21.5%</td><td class="num">15.7%</td><td class="num">28.4%</td><td class="num"><a href="deprel/bej.html">36.2%</a></td></tr><tr><td>ctn</td><td>Chintang-CTNTB</td><td class="num">2243/2289</td><td class="num">14387</td><td class="num"><a href="upos/ctn.html">73.1%</a></td><td class="num">62.9%</td><td class="num">44.5%</td><td class="num">44.1%</td><td class="num">56.2%</td><td class="num"><a href="deprel/ctn.html">56.8%</a></td></tr><tr><td>gwi</td><td>Gwichin-TueCL</td><td class="num">307/313</td><td class="num">990</td><td class="num"><a href="upos/gwi.html">88.8%</a></td><td class="num">80.8%</td><td class="num">74.8%</td><td class="num">72.5%</td><td class="num">85.2%</td><td class="num"><a href="deprel/gwi.html">82.7%</a></td></tr><tr><td>nhi</td><td>Western_Sierra_Puebla_Nahuatl-MesoTree</td><td class="num">141/3024</td><td class="num">1035</td><td class="num"><a href="upos/nhi.html">80.0%</a></td><td class="num">68.6%</td><td class="num">53.8%</td><td class="num">51.2%</td><td class="num">61.5%</td><td class="num"><a href="deprel/nhi.html">65.6%</a></td></tr><tr><td>ruc</td><td>Ruuli-RDT</td><td class="num">1008/1234</td><td class="num">5238</td><td class="num"><a href="upos/ruc.html">77.9%</a></td><td class="num">66.8%</td><td class="num">45.9%</td><td class="num">43.9%</td><td class="num">56.3%</td><td class="num"><a href="deprel/ruc.html">56.1%</a></td></tr><tr><td>wbp</td><td>Warlpiri-UFAL</td><td class="num">54/55</td><td class="num">309</td><td class="num"><a href="upos/wbp.html">86.4%</a></td><td class="num">77.3%</td><td class="num">61.8%</td><td class="num">68.5%</td><td class="num">76.3%</td><td class="num"><a href="deprel/wbp.html">69.3%</a></td></tr><tr><td>yrk</td><td>Nenets-Tundra</td><td class="num">170/170</td><td class="num">1272</td><td class="num"><a href="upos/yrk.html">62.1%</a></td><td class="num">52.9%</td><td class="num">27.6%</td><td class="num">35.7%</td><td class="num">53.4%</td><td class="num"><a href="deprel/yrk.html">35.5%</a></td></tr></tbody><tfoot><tr><td>macro avg</td><td></td><td></td><td class="num"></td><td class="num">76.6%</td><td class="num">64.5%</td><td class="num">47.1%</td><td class="num">47.4%</td><td class="num">59.6%</td><td class="num">57.4%</td></tr><tr><td>micro avg</td><td></td><td></td><td class="num">35082</td><td class="num">72.5%</td><td class="num">56.9%</td><td class="num">37.6%</td><td class="num">35.9%</td><td class="num">51.5%</td><td class="num">50.1%</td></tr></tfoot></table>
+<script>
+(function () {
+  const table = document.querySelector('table');
+  if (!table) return;
+  const tbody = table.tBodies[0];
+  const headers = Array.from(table.tHead.rows[0].cells);
+  let sortCol = -1, sortDir = 1;
+  headers.forEach((th, idx) => {
+    th.addEventListener('click', () => {
+      sortDir = (sortCol === idx) ? -sortDir : 1;
+      sortCol = idx;
+      const rows = Array.from(tbody.rows);
+      rows.sort((a, b) => {
+        const at = a.cells[idx].textContent.trim();
+        const bt = b.cells[idx].textContent.trim();
+        const an = parseFloat(at), bn = parseFloat(bt);
+        const numeric = !isNaN(an) && !isNaN(bn);
+        const cmp = numeric ? an - bn : at.localeCompare(bt);
+        return cmp * sortDir;
+      });
+      rows.forEach(r => tbody.appendChild(r));
+      headers.forEach(h => h.removeAttribute('data-sort'));
+      th.setAttribute('data-sort', sortDir > 0 ? 'asc' : 'desc');
+    });
+  });
+})();
+</script>
+</body>
+</html>

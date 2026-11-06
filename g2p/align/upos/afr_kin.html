@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>UPOS &mdash; kin_train.conllu</title>
+<style>
+* { box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
+#hdr { padding: 8px 16px; background: #2c3e50; color: #fff; flex-shrink: 0; position: relative; }
+#hdr h1 { margin: 0; font-size: 1.1em; }
+#hdr a.back { position: absolute; top: 8px; right: 16px; color: #cfe3f2; font-size: 0.85em; text-decoration: none; }
+#hdr a.back:hover { text-decoration: underline; }
+#stats { margin: 2px 0 0; font-size: 0.8em; opacity: 0.8; }
+#matrix-section { padding: 12px 16px; overflow-x: auto; }
+#sentences-section { padding: 12px 16px; border-top: 2px solid #bbb; }
+#sel-hdr { font-weight: bold; margin-bottom: 10px; color: #2c3e50; min-height: 1.4em; }
+#placeholder { color: #aaa; font-style: italic; padding: 40px; text-align: center; }
+table { border-collapse: collapse; font-size: 0.75em; }
+th { background: #ecf0f1; position: sticky; top: 0; z-index: 1; padding: 4px 6px; border: 1px solid #bbb; }
+th.rh { text-align: left; position: sticky; left: 0; z-index: 2; }
+th.col-label { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; vertical-align: bottom; height: 120px; padding: 4px 2px; text-align: left; }
+td { padding: 3px 8px; border: 1px solid #ddd; text-align: right; min-width: 36px; font-variant-numeric: tabular-nums; }
+td.diag { background: #f0f0f0; color: #999; }
+td.click { cursor: pointer; }
+td.click:hover { filter: brightness(0.88); }
+td.sel { outline: 2px solid #2980b9; outline-offset: -2px; }
+.pair { margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
+.pair-id { background: #f8f8f8; padding: 3px 10px; font-size: 0.82em; color: #555; border-bottom: 1px solid #ddd; font-family: monospace; }
+.pair-id a { color: #2980b9; text-decoration: underline; font-size: 1.1em; }
+.pair-id a:hover { color: #1a5276; }
+.sent-comments { font-family: monospace; font-size: 0.73em; color: #555; padding: 3px 8px; border-bottom: 1px solid #eee; }
+.sent-tbl { width: 100%; border-collapse: collapse; font-size: 0.72em; font-family: monospace; }
+.sent-tbl th, .sent-tbl td { padding: 2px 6px; border: 1px solid #ddd; text-align: left; white-space: nowrap; }
+.sent-tbl th { background: #ecf0f1; font-family: system-ui, sans-serif; }
+.sent-tbl th.pred-col, .sent-tbl td.pred-col { background: #eaf4fb; }
+.sent-tbl th:nth-child(4), .sent-tbl td:nth-child(4),
+.sent-tbl th:nth-child(10), .sent-tbl td:nth-child(10),
+.sent-tbl th:nth-child(13), .sent-tbl td:nth-child(13) { border-left: 2px solid #aaa; }
+.sent-tbl th:nth-child(6), .sent-tbl td:nth-child(6),
+.sent-tbl th:nth-child(8), .sent-tbl td:nth-child(8) { border-left: 1.5px solid #aaa; }
+tr.hl-line td { background: #fffbcc !important; }
+tr.hl-line td.pred-col { background: #fff5a0 !important; }
+.sent-tbl td.mismatch { background: #fde8e8; }
+</style>
+</head>
+<body>
+<div id="hdr">
+  <a class="back" href="../index.html">&larr; Index</a>
+  <h1>kin_train.conllu</h1>
+  <div id="stats">10 sents &middot; 190 tokens &middot; UPOS 48.4% &middot; UAS 16.3% &middot; LAS 7.4% &middot; CLAS 5.8% &middot; CORELAS 11.4% &middot; DEPREL 24.2%</div>
+</div>
+<div id="matrix-section"><table id="tbl"></table></div>
+<div id="sentences-section">
+  <div id="sel-hdr"></div>
+  <div id="list"><div id="placeholder">Click a confusion cell to see examples</div></div>
+</div>
+<script>
+const M = {"ADJ":{"ADJ":1},"ADP":{"ADJ":1,"ADP":6,"NOUN":2,"NUM":1,"PRON":1,"PROPN":1,"VERB":4},"ADV":{"ADP":1,"ADV":1,"VERB":1},"AUX":{"AUX":1,"NOUN":1},"CCONJ":{"ADJ":2,"ADP":2,"CCONJ":5,"NOUN":1,"PRON":1},"DET":{},"NOUN":{"ADJ":5,"ADV":1,"CCONJ":1,"DET":2,"NOUN":31,"NUM":2,"PUNCT":1,"VERB":3},"NUM":{"NOUN":1,"NUM":4},"PART":{"DET":1},"PRON":{"ADJ":5,"DET":13,"NOUN":3,"NUM":2,"PRON":2,"PROPN":1},"PROPN":{"ADJ":1,"PROPN":12},"PUNCT":{"PUNCT":15},"SCONJ":{"ADV":1,"CCONJ":1,"SCONJ":2},"VERB":{"ADJ":1,"ADP":5,"ADV":3,"AUX":6,"DET":2,"NOUN":3,"PART":5,"PRON":3,"PUNCT":5,"SCONJ":2,"VERB":12}};
+const S = {"NOUN→DET":[["Masakhane-Kinyarwanda_train_17",["2"]],["Masakhane-Kinyarwanda_train_7",["1"]]],"NOUN→VERB":[["Masakhane-Kinyarwanda_train_3",["4"]],["Masakhane-Kinyarwanda_train_7",["7","11"]]],"NOUN→NUM":[["Masakhane-Kinyarwanda_train_1",["4"]],["Masakhane-Kinyarwanda_train_17",["6"]]],"NOUN→ADJ":[["Masakhane-Kinyarwanda_train_10",["9"]],["Masakhane-Kinyarwanda_train_11",["17"]],["Masakhane-Kinyarwanda_train_13",["17"]],["Masakhane-Kinyarwanda_train_15",["2"]],["Masakhane-Kinyarwanda_train_6",["14"]]],"NOUN→ADV":[["Masakhane-Kinyarwanda_train_13",["13"]]],"NOUN→CCONJ":[["Masakhane-Kinyarwanda_train_13",["15"]]],"NOUN→PUNCT":[["Masakhane-Kinyarwanda_train_19",["12"]]],"VERB→PUNCT":[["Masakhane-Kinyarwanda_train_10",["6"]],["Masakhane-Kinyarwanda_train_11",["11"]],["Masakhane-Kinyarwanda_train_6",["4"]],["Masakhane-Kinyarwanda_train_7",["4","12"]]],"VERB→PART":[["Masakhane-Kinyarwanda_train_15",["9","11"]],["Masakhane-Kinyarwanda_train_19",["10","17"]],["Masakhane-Kinyarwanda_train_7",["19"]]],"VERB→DET":[["Masakhane-Kinyarwanda_train_1",["1"]],["Masakhane-Kinyarwanda_train_3",["3"]]],"VERB→NOUN":[["Masakhane-Kinyarwanda_train_1",["9"]],["Masakhane-Kinyarwanda_train_13",["11","19"]]],"VERB→PRON":[["Masakhane-Kinyarwanda_train_15",["19","22"]],["Masakhane-Kinyarwanda_train_17",["1"]]],"VERB→ADV":[["Masakhane-Kinyarwanda_train_11",["3"]],["Masakhane-Kinyarwanda_train_13",["16"]],["Masakhane-Kinyarwanda_train_17",["3"]]],"VERB→ADP":[["Masakhane-Kinyarwanda_train_11",["4","10"]],["Masakhane-Kinyarwanda_train_13",["1","8"]],["Masakhane-Kinyarwanda_train_17",["5"]]],"VERB→AUX":[["Masakhane-Kinyarwanda_train_13",["10"]],["Masakhane-Kinyarwanda_train_15",["8"]],["Masakhane-Kinyarwanda_train_19",["4","8","16"]],["Masakhane-Kinyarwanda_train_6",["7"]]],"VERB→SCONJ":[["Masakhane-Kinyarwanda_train_15",["12"]],["Masakhane-Kinyarwanda_train_6",["15"]]],"VERB→ADJ":[["Masakhane-Kinyarwanda_train_11",["6"]]],"PRON→DET":[["Masakhane-Kinyarwanda_train_1",["6","8"]],["Masakhane-Kinyarwanda_train_10",["3","21"]],["Masakhane-Kinyarwanda_train_11",["1"]],["Masakhane-Kinyarwanda_train_13",["4"]],["Masakhane-Kinyarwanda_train_15",["1","6","24"]]],"PRON→ADJ":[["Masakhane-Kinyarwanda_train_10",["8","22"]],["Masakhane-Kinyarwanda_train_11",["8"]],["Masakhane-Kinyarwanda_train_19",["1"]],["Masakhane-Kinyarwanda_train_3",["6"]]],"PRON→NUM":[["Masakhane-Kinyarwanda_train_17",["7"]],["Masakhane-Kinyarwanda_train_3",["7"]]],"PRON→NOUN":[["Masakhane-Kinyarwanda_train_11",["21"]],["Masakhane-Kinyarwanda_train_19",["2"]],["Masakhane-Kinyarwanda_train_6",["18"]]],"PRON→PROPN":[["Masakhane-Kinyarwanda_train_11",["16"]]],"ADP→VERB":[["Masakhane-Kinyarwanda_train_13",["14","20"]],["Masakhane-Kinyarwanda_train_6",["11"]],["Masakhane-Kinyarwanda_train_7",["6"]]],"ADP→NOUN":[["Masakhane-Kinyarwanda_train_6",["9"]],["Masakhane-Kinyarwanda_train_7",["10"]]],"ADP→NUM":[["Masakhane-Kinyarwanda_train_3",["5"]]],"ADP→ADJ":[["Masakhane-Kinyarwanda_train_1",["11"]]],"ADP→PROPN":[["Masakhane-Kinyarwanda_train_13",["2"]]],"ADP→PRON":[["Masakhane-Kinyarwanda_train_19",["11"]]],"AUX→NOUN":[["Masakhane-Kinyarwanda_train_3",["8"]]],"ADV→VERB":[["Masakhane-Kinyarwanda_train_3",["9"]]],"ADV→ADP":[["Masakhane-Kinyarwanda_train_19",["3"]]],"CCONJ→ADP":[["Masakhane-Kinyarwanda_train_1",["2"]],["Masakhane-Kinyarwanda_train_10",["18"]]],"CCONJ→ADJ":[["Masakhane-Kinyarwanda_train_11",["19"]],["Masakhane-Kinyarwanda_train_17",["4"]]],"CCONJ→PRON":[["Masakhane-Kinyarwanda_train_15",["15"]]],"CCONJ→NOUN":[["Masakhane-Kinyarwanda_train_11",["14"]]],"NUM→NOUN":[["Masakhane-Kinyarwanda_train_1",["5"]]],"SCONJ→ADV":[["Masakhane-Kinyarwanda_train_10",["14"]]],"SCONJ→CCONJ":[["Masakhane-Kinyarwanda_train_11",["7"]]],"PART→DET":[["Masakhane-Kinyarwanda_train_10",["15"]]],"PROPN→ADJ":[["Masakhane-Kinyarwanda_train_11",["20"]]]};
+const SENTS = {"Masakhane-Kinyarwanda_train_17":{"comments":["# sent_id = Masakhane-Kinyarwanda_train_17","# text = Ni agace gatuwe n' abasaga miliyoni ebyiri .","# text_en = It is an area where more than two million people live."],"rows":[["1","Ni","ni","VERB","PRON","2","0","dep","nsubj","It","It's","It's","_"],["2","agace","agace","NOUN","DET","3","0","nsubj","det","an","a_region","a_region","_"],["3","gatuwe","gutura","VERB","ADV","0","0","root","advmod","where","occupied","occupied","_"],["4","n'","na","CCONJ","ADJ","3","6","cc","advmod","more","by","by","_"],["5","abasaga","gusaga","VERB","ADP","3","4","dep","fixed","than","over","over","_"],["6","miliyoni","miliyoni","NOUN","NUM","5","0","obj","nummod","million","million","million","_"],["7","ebyiri","-biri","PRON","NUM","6","6","nmod","compound","two","two","two","_"],["8",".","_","PUNCT","PUNCT","3","0","punct","punct",".",".","","_"]]},"Masakhane-Kinyarwanda_train_7":{"comments":["# sent_id = Masakhane-Kinyarwanda_train_7","# text = Umutwe wa Renamo utavuga rumwe n' ishyaka Frelimo riri ku butegetsi wakunze gushoza intambara kenshi , gusa Leta ikihagararaho .","# text_en = The Renamo party, which opposed the ruling Frelimo party, frequently waged war, but the government managed to withstand these attacks."],"rows":[["1","Umutwe","umutwe","NOUN","DET","12","0","nsubj","det","The","political_party","political party","_"],["2","wa","wa","PRON","PRON","1","6","nmod","nsubj","which","of","of","_"],["3","Renamo","_","PROPN","PROPN","2","0","obj","compound","Renamo","Renamo","","_"],["4","utavuga","kuvuga","VERB","PUNCT","1","6","acl","punct",",","to_say","to say","_"],["5","rumwe","rumwe","PRON","DET","4","10","compound","det","the","the_same","the same","_"],["6","n'","na","ADP","VERB","7","0","case","acl:relcl","opposed","n'","","_"],["7","ishyaka","ishyaka","NOUN","VERB","5","10","nmod","amod","ruling","political_party","political party","_"],["8","Frelimo","_","PROPN","PROPN","7","10","flat","compound","Frelimo","Frelimo","","_"],["9","riri","-ri","VERB","VERB","7","0","acl","root","waged","to_be","to be","_"],["10","ku","ku","ADP","NOUN","11","6","case","obj","party","on","on","_"],["11","butegetsi","ubutegetsi","NOUN","VERB","9","9","xcomp","conj","managed","power","power","_"],["12","wakunze","gukunda","VERB","PUNCT","0","0","root","punct",",","to_like","to like","_"],["13","gushoza","Gushoza","VERB","VERB","12","0","compound:svc","root","waged","to_launch","to launch","_"],["14","intambara","intambara","NOUN","NOUN","13","9","compound","obj","war","war","war","_"],["15","kenshi","kenshi","ADV","ADV","12","9","advmod","advmod","frequently","many_time","many time","_"],["16",",","_","PUNCT","PUNCT","19","11","punct","punct",",",",","","_"],["17","gusa","gusa","CCONJ","CCONJ","19","11","cc","cc","but","only","only","_"],["18","Leta","leta","NOUN","NOUN","19","11","nsubj","nsubj","government","government","government","_"],["19","ikihagararaho","kwihagararaho","VERB","PART","12","0","conj","mark","to","to_resist","to resist","_"],["20",".","_","PUNCT","PUNCT","12","9","punct","punct",".",".","","_"]]},"Masakhane-Kinyarwanda_train_3":{"comments":["# sent_id = Masakhane-Kinyarwanda_train_3","# text = Iki gihugu gihana imbibi n' ibindi bitandatu birimo na Tanzaniya mu Majyaruguru .","# text_en = Thi country borders other six countries including Tanzania to the north."],"rows":[["1","Iki","iki","PRON","DET","2","2","nmod","det","Thi","this","this","_"],["2","gihugu","igihugu","NOUN","NOUN","3","4","nsubj","nsubj","country","country","country","_"],["3","gihana","guhana","VERB","DET","0","2","root","det","Thi","to_exchange","to exchange","_"],["4","imbibi","imbibi","NOUN","VERB","3","0","obj","root","borders","borders","borders","_"],["5","n'","na","ADP","NUM","6","8","case","nummod","six","with","with","_"],["6","ibindi","-ndi","PRON","ADJ","3","8","obl:mod","amod","other","other","other","_"],["7","bitandatu","-tandatu","PRON","NUM","6","8","nmod","nummod","six","six","six","_"],["8","birimo","-ri","AUX","NOUN","10","4","cop","obj","countries","to_be","to be","_"],["9","na","na","ADV","VERB","10","10","advmod","case","including","and"," and,also","_"],["10","Tanzaniya","Tanzaniya","PROPN","PROPN","6","8","acl:relcl","nmod","Tanzania","Tanzania","Tanzania","_"],["11","mu","mu","ADP","ADP","12","12","case","case","to","to"," to,in","_"],["12","Majyaruguru","amajyaruguru","NOUN","NOUN","10","4","obl:mod","obl","north","north","north ","_"],["13",".","_","PUNCT","PUNCT","3","4","punct","punct",".",".","","_"]]},"Masakhane-Kinyarwanda_train_1":{"comments":["# sent_id = Masakhane-Kinyarwanda_train_1","# text = Gituwe n' abasaga miliyoni 31 aho icyizere cyo kubaho kiri ku myaka 56 .","# text_en = The country, with a population exceeding 30 million, has an average life expectancy of 56 years."],"rows":[["1","Gituwe","Gutura","VERB","DET","0","5","root","det","The","settled","settled","_"],["2","n'","na","CCONJ","ADP","3","0","cc","case","with","with","with","_"],["3","abasaga","Gusaga","VERB","VERB","1","0","conj","acl","exceeding","over","over","_"],["4","miliyoni","miliyoni","NOUN","NUM","3","3","obj","obj","million","million","million","_"],["5","31","31","NUM","NOUN","4","10","nmod","nsubj","country","theyI","31","_"],["6","aho","aho","PRON","DET","7","0","nmod","det","a","with","with","_"],["7","icyizere","ikizere","NOUN","NOUN","10","10","aux","obj","expectancy","hope","hope","_"],["8","cyo","cyo","PRON","DET","9","7","conj","det","an","for","for","_"],["9","kubaho","kubaho","VERB","NOUN","10","7","aux","compound","life","living","living","_"],["10","kiri","-ri","VERB","VERB","1","0","ccomp","root","has","is","is","_"],["11","ku","ku","ADP","ADJ","12","7","obl:arg","amod","average","at","at","_"],["12","myaka","imyaka","NOUN","NOUN","10","7","aux","nmod","years","years","years","_"],["13","56","56","NUM","NUM","12","12","nmod","nummod","56","56","56","_"],["14",".","_","PUNCT","PUNCT","1","10","punct","punct",".",".","","_"]]},"Masakhane-Kinyarwanda_train_10":{"comments":["# sent_id = Masakhane-Kinyarwanda_train_10","# text = Mu ntara ya Cabo Delgado hadutse umutwe w' iterabwoba wiyise al shabab , nubwo nta mikoranire ufitanye na Al Shabab ya nyayo .","# text_en = In Cabo Delgado province, a different terrorist movement named Al Shabab emerged; however, it has no connections or affiliations with the original Al Shabab."],"rows":[["1","Mu","mu","ADP","ADP","2","2","dep","case","In","in","in","_"],["2","ntara","intara","NOUN","NOUN","6","0","nsubj","obl","province","province","province","_"],["3","ya","ya","PRON","DET","2","7","nmod","det","a","of","of","_"],["4","Cabo","_","PROPN","PROPN","3","2","nmod","compound","Cabo","Cabo","Cabo","_"],["5","Delgado","_","PROPN","PROPN","4","4","flat","flat","Delgado","Delgado","Delgado","_"],["6","hadutse","kwaduka","VERB","PUNCT","0","2","root","punct",",","to_emerge","to emerge","_"],["7","umutwe","umutwe","NOUN","NOUN","6","0","obj","nsubj","movement","movement","movement","_"],["8","w'","wa","PRON","ADJ","7","7","nmod","amod","different","w'","","_"],["9","iterabwoba","iterabwoba","NOUN","ADJ","8","7","obj","amod","terrorist","terrorism","terrorism","_"],["10","wiyise","kwita","VERB","VERB","9","7","aux","acl","named","to_name"," to call,to name","_"],["11","al","_","PROPN","PROPN","12","10","compound","xcomp","Al","Al","Al","_"],["12","shabab","_","PROPN","PROPN","10","11","obj","flat","Shabab","Shabab","Shabab","_"],["13",",","_","PUNCT","PUNCT","14","14","punct","punct",",",",","","_"],["14","nubwo","nubwo","SCONJ","ADV","15","17","dep","advmod","however","even"," despite,even","_"],["15","nta","nta","PART","DET","16","0","nmod","det","no","no","no","_"],["16","mikoranire","imikoranire","NOUN","NOUN","6","0","obj","conj","affiliations","collaboration","collaboration","_"],["17","ufitanye","-fite","VERB","VERB","16","0","aux","parataxis","has","to_have","to have","_"],["18","na","na","CCONJ","ADP","17","19","cc","case","with","with","with","_"],["19","Al","_","PROPN","PROPN","17","0","obl","nmod","Al","Al","Al","_"],["20","Shabab","_","PROPN","PROPN","19","19","flat","flat","Shabab","Shabab","Shabab","_"],["21","ya","ya","PRON","DET","20","19","nmod","det","the","of","of","_"],["22","nyayo","nyayo","PRON","ADJ","21","19","nmod","amod","original","real","real","_"],["23",".","_","PUNCT","PUNCT","6","0","punct","punct",".",".","","_"]]},"Masakhane-Kinyarwanda_train_11":{"comments":["# sent_id = Masakhane-Kinyarwanda_train_11","# text = Uwo mutwe watangiye ari inyeshyamba zisanzwe ariko uko iminsi yicuma wagiye ugirana umubano n' imitwe y' iterabwoba mpuzamahanga nka IS yo muri Syria na Iraq .","# text_en = This group initially began as a local simple resistance movement, but over time it established connections with international terrorist organizations such as ISIS in Syria and Iraq."],"rows":[["1","Uwo","uwo","PRON","DET","2","15","nmod","det","This","that","that","_"],["2","mutwe","umutwe","NOUN","NOUN","11","0","nsubj","obl","movement","movement","movement","_"],["3","watangiye","gutangira","VERB","ADV","2","0","acl","advmod","initially","to_start","to start","_"],["4","ari","-ri","VERB","ADP","3","2","ccomp","case","as","to_be","to be","_"],["5","inyeshyamba","inyeshyamba","NOUN","NOUN","4","2","xcomp","compound","resistance","resistant","resistant","_"],["6","zisanzwe","gusangwa","VERB","ADJ","5","2","acl","amod","simple","to_be_common","to be common","_"],["7","ariko","ariko","SCONJ","CCONJ","6","12","conj","cc","but","but","but","_"],["8","uko","uko","PRON","ADJ","7","2","cc","amod","local","uko","uko","_"],["9","iminsi","umunsi","NOUN","NOUN","7","12","dep","obl","time","day","day","_"],["10","yicuma","kwicuma","VERB","ADP","9","9","acl","case","over","to_go_on","to go on/ to advance","_"],["11","wagiye","kujya","VERB","PUNCT","0","12","root","punct",",","to_go","to go","_"],["12","ugirana","kugira","VERB","VERB","11","0","aux","conj","established","to_initiate","to initiate","_"],["13","umubano","umubano","NOUN","NOUN","11","12","obj","obj","connections","relationship","relationship","_"],["14","n'","na","CCONJ","NOUN","15","12","case","obl","time","n'","","_"],["15","imitwe","umutwe","NOUN","NOUN","13","0","nmod","nsubj","group","group","group","_"],["16","y'","ya","PRON","PROPN","15","21","nmod","nmod","ISIS","y'","","_"],["17","iterabwoba","iterabwoba","NOUN","ADJ","16","21","nmod","amod","terrorist","terrorism","terrorism","_"],["18","mpuzamahanga","mpuzamahanga","ADJ","ADJ","17","21","amod","amod","international","international","international","_"],["19","nka","nka","CCONJ","ADJ","20","16","case","case","such","such_as","such as","_"],["20","IS","_","PROPN","ADJ","18","21","conj","amod","terrorist","IS","IS","_"],["21","yo","yo","PRON","NOUN","15","13","nmod","nmod","organizations","of","of","_"],["22","muri","muri","ADP","ADP","21","23","dep","case","in","in","in","_"],["23","Syria","_","PROPN","PROPN","22","16","obl:mod","nmod","Syria","Syria","Syria","_"],["24","na","na","CCONJ","CCONJ","23","25","cc","cc","and","and","and","_"],["25","Iraq","_","PROPN","PROPN","23","23","nmod","conj","Iraq","Iraq","Iraq","_"],["26",".","_","PUNCT","PUNCT","11","0","punct","punct",".",".","","_"]]},"Masakhane-Kinyarwanda_train_13":{"comments":["# sent_id = Masakhane-Kinyarwanda_train_13","# text = Kugeza muri Mata uyu mwaka , abaturage basaga 3000 bari bamaze kwicwa bunyamaswa mu gihe abasaga ibihumbi 800 bavuye mu byabo .","# text_en = Until April this year, more than 3,000 people were brutally killed and over 800 people were forced to leave their homes."],"rows":[["1","Kugeza","kugeza","VERB","ADP","7","2","dislocated","case","Until","until","until","_"],["2","muri","muri","ADP","PROPN","1","12","dep","obl","April","in","in","_"],["3","Mata","Mata","PROPN","PROPN","2","12","obl:mod","obl","April","April","April","_"],["4","uyu","uyu","PRON","DET","3","5","nmod","det","this","this","this","_"],["5","mwaka","umwaka","NOUN","NOUN","4","12","nmod","obl:unmarked","year","year","year","_"],["6",",","_","PUNCT","PUNCT","7","2","punct","punct",",",",","","_"],["7","abaturage","umuturage","NOUN","NOUN","12","12","nsubj","nsubj:pass","people","citizen","citizen","_"],["8","basaga","gusaga","VERB","ADP","7","17","acl","fixed","than","to_exceed","to exceed","_"],["9","3000","_","NUM","NUM","8","7","obl:mod","nummod","3","they000","3000","_"],["10","bari","-ri","VERB","AUX","7","20","ccomp","aux:pass","were","to_be","to be","_"],["11","bamaze","kumara","VERB","NOUN","10","12","dep:comp","nsubj:pass","people","to_finish","to finish","_"],["12","kwicwa","kwica","VERB","VERB","0","0","root","root","killed","to_kill","to kill","_"],["13","bunyamaswa","bunyamaswa","NOUN","ADV","12","12","obl:mod","advmod","brutally","savagely","savagely","_"],["14","mu","mu","ADP","VERB","13","0","dep","root","killed","in","in","_"],["15","gihe","igihe","NOUN","CCONJ","14","20","obl:arg","cc","and","time","time","_"],["16","abasaga","gusaga","VERB","ADV","15","18","acl","advmod","over","to_exceed","to exceed","_"],["17","ibihumbi","igihumbi","NOUN","ADJ","16","0","obl:mod","advmod","more","ibihumbi","","_"],["18","800","_","NUM","NUM","17","19","nmod","nummod","800","800","800","_"],["19","bavuye","kuva","VERB","NOUN","16","20","ccomp","nsubj:pass","people","to_quit"," to leave,to quit","_"],["20","mu","mu","ADP","VERB","19","12","dep","conj","forced","in","in","_"],["21","byabo","-abo","PRON","PRON","20","0","obl:mod","nmod:poss","their","their_property","their property","_"],["22",".","_","PUNCT","PUNCT","12","12","punct","punct",".",".","","_"]]},"Masakhane-Kinyarwanda_train_15":{"comments":["# sent_id = Masakhane-Kinyarwanda_train_15","# text = Uyu mutwe wakomotse ku burakari bw' abaturage bari bamaze igihe binubira guhezwa no kutitabwaho na Guverinoma , nubwo batuye mu gace kinjiriza Leta akayabo .","# text_en = This military group emerged from the population's frustration over their rights being neglected and feeling abandoned by their government, despite living in a region that generates significant revenue for the state."],"rows":[["1","Uyu","uyu","PRON","DET","2","0","nmod","det","This","this","this","_"],["2","mutwe","umutwe","NOUN","ADJ","3","0","nsubj","amod","military","military_group","military group","_"],["3","wakomotse","gukomoka","VERB","VERB","0","0","root","root","emerged","To_originate","To originate","_"],["4","ku","ku","ADP","ADP","5","5","dep:comp","case","from","on","on","_"],["5","burakari","uburakari","NOUN","NOUN","3","3","obl:mod","obl","frustration","frustration","frustration","_"],["6","bw'","bwa","PRON","DET","5","7","dep:comp","det","the","of","of","_"],["7","abaturage","umuturage","NOUN","NOUN","6","5","obj","nmod:poss","population","population","population","_"],["8","bari","-ri","VERB","AUX","7","14","dep","aux:pass","being","to_be","to be","_"],["9","bamaze","kumara","VERB","PART","8","7","aux","case","s","to_last","to last","_"],["10","igihe","igihe","NOUN","NOUN","9","3","obj","obl","frustration","time","time","_"],["11","binubira","kwinuba","VERB","PART","8","7","dep:comp","case","s","to_express_frustration","to express frustration","_"],["12","guhezwa","guhezwa","VERB","SCONJ","11","14","dep:comp","mark","over","to_deprive_the_right","to deprive the right","_"],["13","no","no","CCONJ","CCONJ","12","0","cc","cc","and","and","and","_"],["14","kutitabwaho","kwita","VERB","VERB","11","5","dep:comp","acl","neglected","to_take_care_of","to take care of","_"],["15","na","na","CCONJ","PRON","14","16","cc","nmod:poss","their","and","and","_"],["16","Guverinoma","_","NOUN","NOUN","14","0","obl","obl:agent","government","government","government","_"],["17",",","_","PUNCT","PUNCT","18","0","punct","punct",",",",","","_"],["18","nubwo","nubwo","SCONJ","SCONJ","19","0","dep","mark","despite","even_if","even if","_"],["19","batuye","gutura","VERB","PRON","16","0","ccomp","nmod:poss","their","to_live","to live","_"],["20","mu","mu","ADP","ADP","21","21","case","case","in","in","in","_"],["21","gace","agace","NOUN","NOUN","19","0","obl","obl","region","zone","zone","_"],["22","kinjiriza","kwinjiza","VERB","PRON","21","0","acl","nsubj","that","to_provide_income","to provide income","_"],["23","Leta","leta","NOUN","NOUN","22","0","obl:arg","nmod","state","government","government","_"],["24","akayabo","akayabo","PRON","DET","22","21","obj","det","a","a_lot_of_money","a lot of money","_"],["25",".","_","PUNCT","PUNCT","3","3","punct","punct",".",".","","_"]]},"Masakhane-Kinyarwanda_train_6":{"comments":["# sent_id = Masakhane-Kinyarwanda_train_6","# text = Nubwo ari igihugu gifite umutungo , cyakunze guhura n' ibibazo by' umutekano na politiki guhera mu 1975 ubwo cyabonaga ubwigenge .","# text_en = Despite being a resource-rich country, it has faced insecurity and political challenges since gaining independence in 1975."],"rows":[["1","Nubwo","nubwo","SCONJ","SCONJ","4","3","mark","mark","Despite","dispite"," dispite,although","_"],["2","ari","-ri","AUX","AUX","4","3","aux","cop","being","to_be","to be","_"],["3","igihugu","igihugu","NOUN","NOUN","4","8","nsubj","advcl","country","country","country","_"],["4","gifite","-fite","VERB","PUNCT","7","5","advcl","punct","-","to_have"," to possess,to have","_"],["5","umutungo","umutungo","NOUN","NOUN","4","0","obj","compound","resource","resource","resource","_"],["6",",","_","PUNCT","PUNCT","7","3","punct","punct",",",",","","_"],["7","cyakunze","gukunda","VERB","AUX","0","8","root","aux","has","to_like"," to like,to be used to","_"],["8","guhura","guhura","VERB","VERB","7","0","compound:svc","root","faced","to_meet","to meet","_"],["9","n'","na","ADP","NOUN","10","8","case","obj","insecurity","with_problems","with_problems","_"],["10","ibibazo","n'ibibazo","NOUN","NOUN","8","9","obl","conj","challenges","with_problems","with_problems","_"],["11","by'","bya","ADP","VERB","12","0","case","root","faced","of","of","_"],["12","umutekano","'umutekano","NOUN","NOUN","10","8","nmod","obj","insecurity","security","security","_"],["13","na","na ","CCONJ","CCONJ","14","10","cc","cc","and","and","and","_"],["14","politiki","politiki","NOUN","ADJ","12","10","conj","amod","political","politics","politics","_"],["15","guhera","guhera","VERB","SCONJ","10","19","acl","mark","since","from","from","_"],["16","mu","mu","ADP","ADP","17","17","case","case","in","in","in","_"],["17","1975","_","NUM","NUM","15","19","obl","obl","1975","I975","","_"],["18","ubwo","ubwo","PRON","NOUN","7","19","obl:mod","obj","independence","when","when","_"],["19","cyabonaga","kubona","VERB","VERB","18","8","ccomp","advcl","gaining","to_get","to get","_"],["20","ubwigenge","ubwigenge","NOUN","NOUN","19","19","obj","obj","independence","independence","independence","_"],["21",".","_","PUNCT","PUNCT","7","8","punct","punct",".",".","","_"]]},"Masakhane-Kinyarwanda_train_19":{"comments":["# sent_id = Masakhane-Kinyarwanda_train_19","# text = Uyu wa nyuma ni na wo inyeshyamba zimaze umwaka zigaruriye ku buryo ingabo za Leta zananiwe kubatsimbura .","# text_en = The latter town has been under rebels' control for a year, and the government forces have been unable to dislodge them."],"rows":[["1","Uyu","uyu","PRON","ADJ","4","2","nsubj","amod","latter","this","this","_"],["2","wa","wa","PRON","NOUN","1","0","dep:comp","nsubj","town","of","of","_"],["3","nyuma","nyuma","ADV","ADP","2","9","advmod","case","for","last","last","_"],["4","ni","ni","VERB","AUX","0","0","root","aux","has","is","is","_"],["5","na","na","CCONJ","CCONJ","6","0","cc","cc","and","also","also","_"],["6","wo","wo","PRON","DET","4","2","obj","det","The","the_one","the one","_"],["7","inyeshyamba","inyeshyamba","NOUN","NOUN","6","0","nmod","nmod:poss","rebels","rebels","rebels","_"],["8","zimaze","kumara","VERB","AUX","7","0","acl","cop","been","to_last","to last","_"],["9","umwaka","umwaka","NOUN","NOUN","8","0","obj","nmod","year","year","year","_"],["10","zigaruriye","kwigarurira","VERB","PART","7","7","acl","case","'","to_conquer","to conquer","_"],["11","ku","ku","ADP","PRON","10","0","dep","obj","them","such","such","_"],["12","buryo","uburyo","NOUN","PUNCT","11","0","obl:mod","punct",",","manner","manner","_"],["13","ingabo","ingabo","NOUN","NOUN","12","0","nmod","nsubj","forces","army","army","_"],["14","za","za","PRON","DET","13","13","nmod","det","the","of","of","_"],["15","Leta","leta","NOUN","NOUN","14","13","nmod","compound","government","government","government","_"],["16","zananiwe","kunanira","VERB","AUX","13","0","dep","aux","have","To_fail","To fail","_"],["17","kubatsimbura","gutsimbura","VERB","PART","16","0","dep:comp","mark","to","to_repel","to repel","_"],["18",".","_","PUNCT","PUNCT","4","0","punct","punct",".",".","","_"]]}};
+const TREEBANK = "kin_train.conllu";
+const labels = Object.keys(M).sort();
+const tbl = document.getElementById('tbl');
+
+let maxV = 1;
+for (const g of labels)
+  for (const p of labels)
+    if (g !== p && M[g] && M[g][p]) maxV = Math.max(maxV, M[g][p]);
+
+const hrow = tbl.insertRow();
+const corner = document.createElement('th');
+corner.className = 'rh';
+corner.textContent = 'gold \ pred';
+hrow.appendChild(corner);
+for (const p of labels) {
+  const th = document.createElement('th');
+  th.className = 'col-label';
+  th.textContent = p;
+  hrow.appendChild(th);
+}
+
+let sel = null;
+for (const g of labels) {
+  const row = tbl.insertRow();
+  const rh = document.createElement('th');
+  rh.className = 'rh';
+  rh.textContent = g;
+  row.appendChild(rh);
+  for (const p of labels) {
+    const td = row.insertCell();
+    const cnt = (M[g] && M[g][p]) || 0;
+    td.textContent = cnt || '';
+    if (g === p) {
+      td.className = 'diag';
+      td.title = cnt + ' correct';
+    } else if (cnt > 0) {
+      const t = cnt / maxV;
+      const ch = Math.round(255 * (1 - t * 0.8));
+      td.style.background = 'rgb(255,' + ch + ',' + ch + ')';
+      td.id = g + '--' + p;
+      td.className = 'click';
+      td.title = 'gold:' + g + ' → pred:' + p + ': ' + cnt;
+      td.addEventListener('click', (function(gl, pl, c, cell) {
+        return function() { show(gl, pl, c, cell); };
+      })(g, p, cnt, td));
+    }
+  }
+}
+
+function show(gL, pL, cnt, cell) {
+  history.replaceState(null, '', '#' + gL + '--' + pL);
+  if (sel) sel.classList.remove('sel');
+  cell.classList.add('sel');
+  sel = cell;
+  document.getElementById('sel-hdr').textContent =
+    'gold: ' + gL + '  →  pred: ' + pL + '  (' + cnt + ' sentence' + (cnt !== 1 ? 's' : '') + ')';
+  document.getElementById('sentences-section').scrollIntoView({ behavior: 'smooth' });
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  const corpus = (TREEBANK.startsWith('UD_') ? TREEBANK : 'UD_' + TREEBANK) + '@2.18';
+  const sents = S[gL + '→' + pL] || [];
+  for (const [sid, tids] of sents) {
+    const sent = SENTS[sid] || {};
+    const grewUrl = 'https://universal.grew.fr/?corpus=' + corpus +
+      '&request=' + encodeURIComponent('pattern { meta.sent_id = "' + sid + '" }');
+    const d = document.createElement('div');
+    d.className = 'pair';
+    d.innerHTML =
+      '<div class="pair-id"><a href="' + grewUrl + '" target="_blank">' + esc(sid) + '</a></div>' +
+      '<div style="overflow-x:auto">' + renderTable(sent.comments, sent.rows, tids) + '</div>';
+    list.appendChild(d);
+  }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+const HDRS = ['ID','FORM','LEMMA','UPOS','UPOS·p','HEAD','HEAD·p','DEPREL','DEPREL·p','AlignedToken','AlignGloss','Gloss','FEATS'];
+const PRED_COLS = new Set([4, 6, 8]);
+const PRED_GOLD = new Map([[4, 3], [6, 5], [8, 7]]);
+
+function renderTable(comments, rows, tokenIds) {
+  const ids = new Set(tokenIds || []);
+  let h = '';
+  if (comments && comments.length)
+    h += '<div class="sent-comments">' + comments.map(esc).join('<br>') + '</div>';
+  h += '<table class="sent-tbl"><thead><tr>';
+  HDRS.forEach((hdr, i) => {
+    h += '<th' + (PRED_COLS.has(i) ? ' class="pred-col"' : '') + '>' + esc(hdr) + '</th>';
+  });
+  h += '</tr></thead><tbody>';
+  for (const row of rows) {
+    const hl = ids.has(row[0]);
+    h += '<tr' + (hl ? ' class="hl-line"' : '') + '>';
+    row.forEach((cell, i) => {
+      const goldIdx = PRED_GOLD.get(i);
+      const mismatch = goldIdx !== undefined && cell !== row[goldIdx];
+      const cls = (PRED_COLS.has(i) ? 'pred-col' : '') + (mismatch ? ' mismatch' : '');
+      h += '<td' + (cls.trim() ? ' class="' + cls.trim() + '"' : '') + '>' + esc(cell) + '</td>';
+    });
+    h += '</tr>';
+  }
+  h += '</tbody></table>';
+  return h;
+}
+
+if (location.hash) {
+  const cell = document.getElementById(location.hash.slice(1));
+  if (cell) { cell.click(); cell.scrollIntoView({ behavior: 'instant', block: 'center' }); }
+}
+</script>
+</body>
+</html>
