@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>deprel &mdash; Oroch-GDUD</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+Tangut&display=swap">
+<style>
+* { box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
+#hdr { padding: 8px 16px; background: #2c3e50; color: #fff; flex-shrink: 0; position: relative; }
+#hdr h1 { margin: 0; font-size: 1.1em; }
+#hdr a.back { position: absolute; top: 8px; right: 16px; color: #cfe3f2; font-size: 0.85em; text-decoration: none; }
+#hdr a.back:hover { text-decoration: underline; }
+#stats { margin: 2px 0 0; font-size: 0.8em; opacity: 0.8; }
+#matrix-section { padding: 12px 16px; overflow-x: auto; }
+#sentences-section { padding: 12px 16px; border-top: 2px solid #bbb; }
+#sel-hdr { font-weight: bold; margin-bottom: 10px; color: #2c3e50; min-height: 1.4em; }
+#placeholder { color: #aaa; font-style: italic; padding: 40px; text-align: center; }
+table { border-collapse: collapse; font-size: 0.75em; }
+th { background: #ecf0f1; position: sticky; top: 0; z-index: 1; padding: 4px 6px; border: 1px solid #bbb; }
+th.rh { text-align: left; position: sticky; left: 0; z-index: 2; }
+th.col-label { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; vertical-align: bottom; height: 120px; padding: 4px 2px; text-align: left; }
+td { padding: 3px 8px; border: 1px solid #ddd; text-align: right; min-width: 36px; font-variant-numeric: tabular-nums; }
+td.diag { background: #f0f0f0; color: #999; }
+td.click { cursor: pointer; }
+td.click:hover { filter: brightness(0.88); }
+td.sel { outline: 2px solid #2980b9; outline-offset: -2px; }
+.pair { margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
+.pair-id { background: #f8f8f8; padding: 3px 10px; font-size: 0.82em; color: #555; border-bottom: 1px solid #ddd; font-family: monospace; }
+.pair-id a { color: #2980b9; text-decoration: underline; font-size: 1.1em; }
+.pair-id a:hover { color: #1a5276; }
+.sent-comments { font-family: monospace, "Noto Serif Tangut"; font-size: 0.73em; color: #555; padding: 3px 8px; border-bottom: 1px solid #eee; }
+.sent-tbl { width: 100%; border-collapse: collapse; font-size: 0.72em; font-family: monospace, "Noto Serif Tangut"; }
+.sent-tbl th, .sent-tbl td { padding: 2px 6px; border: 1px solid #ddd; text-align: left; white-space: nowrap; }
+.sent-tbl th { background: #ecf0f1; font-family: system-ui, sans-serif; }
+.sent-tbl th.pred-col, .sent-tbl td.pred-col { background: #eaf4fb; }
+.sent-tbl th:nth-child(4), .sent-tbl td:nth-child(4),
+.sent-tbl th:nth-child(10), .sent-tbl td:nth-child(10),
+.sent-tbl th:nth-child(13), .sent-tbl td:nth-child(13) { border-left: 2px solid #aaa; }
+.sent-tbl th:nth-child(6), .sent-tbl td:nth-child(6),
+.sent-tbl th:nth-child(8), .sent-tbl td:nth-child(8) { border-left: 1.5px solid #aaa; }
+tr.hl-line td { background: #fffbcc !important; }
+tr.hl-line td.pred-col { background: #fff5a0 !important; }
+.sent-tbl td.mismatch { background: #fde8e8; }
+</style>
+</head>
+<body>
+<div id="hdr">
+  <a class="back" href="../index.html">&larr; Index</a>
+  <h1>Oroch-GDUD</h1>
+  <div id="stats">21 sents &middot; 68 tokens &middot; UPOS 42.6% &middot; UAS 48.5% &middot; LAS 38.2% &middot; CLAS 25.9% &middot; CORELAS 34.1% &middot; DEPREL 48.5%</div>
+</div>
+<div id="matrix-section"><table id="tbl"></table></div>
+<div id="sentences-section">
+  <div id="sel-hdr"></div>
+  <div id="list"><div id="placeholder">Click a confusion cell to see examples</div></div>
+</div>
+<script>
+const M = {"advcl":{},"advmod":{},"amod":{"nsubj":2,"root":2},"appos":{"root":1},"aux":{},"compound":{},"cop":{},"discourse":{"discourse":1,"nsubj":1},"mark":{},"nmod":{"advmod":1,"mark":1},"nsubj":{"nsubj":7,"obj":1,"root":4},"obj":{"advcl":1,"advmod":1,"amod":1,"cop":1,"nsubj":1,"obl":1,"root":2},"obl":{"advmod":2,"amod":1,"root":1},"parataxis":{},"punct":{"punct":14},"root":{"advcl":1,"advmod":2,"amod":2,"aux":1,"compound":1,"nsubj":1,"parataxis":1,"root":11,"xcomp":1},"xcomp":{}};
+const S = {"nmod→advmod":[["Oroch_grammar_64",["1"]]],"nmod→mark":[["Oroch_grammar_65",["1"]]],"obl→advmod":[["Oroch_grammar_66",["2"]],["Oroch_grammar_69",["2"]]],"obl→root":[["Oroch_grammar_70",["2"]]],"obl→amod":[["Oroch_grammar_75",["1"]]],"obj→cop":[["Oroch_grammar_67",["2"]]],"obj→advcl":[["Oroch_grammar_71",["2"]]],"obj→amod":[["Oroch_grammar_72",["4"]]],"obj→obl":[["Oroch_grammar_73",["3"]]],"obj→advmod":[["Oroch_grammar_77",["3"]]],"obj→root":[["Oroch_grammar_80",["1"]],["Oroch_grammar_82",["1"]]],"obj→nsubj":[["Oroch_grammar_81",["1"]]],"nsubj→obj":[["Oroch_grammar_69",["1"]]],"nsubj→root":[["Oroch_grammar_71",["1"]],["Oroch_grammar_78",["1"]],["Oroch_grammar_83",["1"]],["Oroch_grammar_84",["1"]]],"root→xcomp":[["Oroch_grammar_70",["3"]]],"root→compound":[["Oroch_grammar_71",["3"]]],"root→aux":[["Oroch_grammar_73",["4"]]],"root→advmod":[["Oroch_grammar_77",["4"]],["Oroch_grammar_84",["2"]]],"root→parataxis":[["Oroch_grammar_78",["2"]]],"root→nsubj":[["Oroch_grammar_79",["1"]]],"root→advcl":[["Oroch_grammar_80",["2"]]],"root→amod":[["Oroch_grammar_82",["2"]],["Oroch_grammar_83",["2"]]],"discourse→nsubj":[["Oroch_grammar_73",["1"]]],"amod→root":[["Oroch_grammar_73",["2"]],["Oroch_grammar_79",["2"]]],"amod→nsubj":[["Oroch_grammar_74",["1"]],["Oroch_grammar_76",["2"]]],"appos→root":[["Oroch_grammar_77",["2"]]]};
+const SENTS = {"Oroch_grammar_64":{"comments":["# sent_id = Oroch_grammar_64","# text = Bi-n du","# text[eng] = My house"],"rows":[["1","Bi-n","bi","PRON","DET","2","2","nmod:poss","advmod","1SG-GEN","Case=Gen|Number=Sing|Person=1|PronType=Prs"],["2","du","du","NOUN","ADJ","0","0","root","root","house","Case=Nom"]]},"Oroch_grammar_65":{"comments":["# sent_id = Oroch_grammar_65","# text = Si-n möri","# text[eng] = Your tree"],"rows":[["1","Si-n","si","PRON","PART","2","2","nmod:poss","mark","2SG-GEN","Case=Gen|Number=Sing|Person=2|PronType=Prs"],["2","möri","möri","NOUN","NUM","0","0","root","root","tree","Case=Nom"]]},"Oroch_grammar_66":{"comments":["# sent_id = Oroch_grammar_66","# text = Bi du-du mana-i.","# text[eng] = I go to the house."],"rows":[["1","Bi","bi","PRON","PRON","3","3","nsubj","nsubj","1SG","Case=Nom|Number=Sing|Person=1|PronType=Prs"],["2","du-du","du","NOUN","ADJ","3","1","obl","advmod","house-DAT","Case=Dat"],["3","mana-i","mana","VERB","VERB","0","0","root","root","go-PRS","Mood=Ind|Number=Sing|Person=1|Tense=Pres"],["4",".",".","PUNCT","PUNCT","3","3","punct","punct","","_"]]},"Oroch_grammar_69":{"comments":["# sent_id = Oroch_grammar_69","# text = Bi du-du mana-l.","# text[eng] = I went to the house."],"rows":[["1","Bi","bi","PRON","PRON","3","3","nsubj","obj","1SG","Case=Nom|Number=Sing|Person=1|PronType=Prs"],["2","du-du","du","NOUN","ADJ","3","1","obl","advmod","house-DAT","Case=Dat"],["3","mana-l","mana","VERB","VERB","0","0","root","root","go-PST","Mood=Ind|Number=Sing|Person=1|Tense=Past"],["4",".",".","PUNCT","PUNCT","3","3","punct","punct","","_"]]},"Oroch_grammar_70":{"comments":["# sent_id = Oroch_grammar_70","# text = Bi tali-vin güdi-l.","# text[eng] = I cut it with a knife."],"rows":[["1","Bi","bi","PRON","DET","3","2","nsubj","nsubj","1SG","Case=Nom|Number=Sing|Person=1|PronType=Prs"],["2","tali-vin","tali","NOUN","NOUN","3","0","obl","root","knife-INST","Case=Ins"],["3","güdi-l","güdi","VERB","ADV","0","2","root","xcomp","cut-PST","Mood=Ind|Number=Sing|Person=1|Tense=Past"],["4",".",".","PUNCT","PUNCT","3","3","punct","punct","","_"]]},"Oroch_grammar_75":{"comments":["# sent_id = Oroch_grammar_75","# text = Taiga-du ujəχə bi-mi.","# text[eng] = There’s a bear in the forest."],"rows":[["1","Taiga-du","taiga","NOUN","ADJ","3","2","obl","amod","forest-LOC","Case=Loc"],["2","ujəχə","ujəχə","NOUN","NOUN","3","3","nsubj","nsubj","bear","Case=Nom"],["3","bi-mi","bi","VERB","ADJ","0","0","root","root","be-PRS","Mood=Ind|Number=Sing|Person=3|Tense=Pres"],["4",".",".","PUNCT","PUNCT","3","3","punct","punct","","_"]]},"Oroch_grammar_67":{"comments":["# sent_id = Oroch_grammar_67","# text = Bi nokoi-nə bē-i.","# text[eng] = I see the dog."],"rows":[["1","Bi","bi","PRON","PRON","3","2","nsubj","nsubj","1SG","Case=Nom|Number=Sing|Person=1|PronType=Prs"],["2","nokoi-nə","nokoi","NOUN","ADP","3","3","obj","cop","dog-ACC","Case=Acc"],["3","bē-i","bē","VERB","AUX","0","0","root","root","see-PRS","Mood=Ind|Number=Sing|Person=1|Tense=Pres"],["4",".",".","PUNCT","PUNCT","3","3","punct","punct","","_"]]},"Oroch_grammar_71":{"comments":["# sent_id = Oroch_grammar_71","# text = Si mangī dʒə-si-ni?","# text[eng] = Do you eat fish?"],"rows":[["1","Si","si","PRON","VERB","3","0","nsubj","root","2SG","Case=Nom|Number=Sing|Person=2|PronType=Prs"],["2","mangī","mangī","NOUN","PART","3","1","obj","advcl","fish","Case=Nom"],["3","dʒə-si-ni","dʒə","VERB","PART","0","1","root","compound:prt","eat-PRS-Q","Mood=Ind|Number=Sing|Person=2|Tense=Pres"],["4","?","?","PUNCT","PUNCT","3","3","punct","punct","","_"]]},"Oroch_grammar_72":{"comments":["# sent_id = Oroch_grammar_72","# text = Ee, minī mangī dʒə-mi.","# text[eng] = Yes, I eat fish."],"rows":[["1","Ee","ee","INTJ","INTJ","4","5","discourse","discourse","yes","_"],["2",",",",","PUNCT","PUNCT","1","1","punct","punct","","_"],["3","minī","bi","PRON","PRON","4","5","nsubj","nsubj","1SG","Case=Nom|Number=Sing|Person=1|PronType=Prs"],["4","mangī","mangī","NOUN","PART","5","3","obj","amod","fish","Case=Nom"],["5","dʒə-mi","dʒə","VERB","ADJ","0","0","root","root","eat-PRS","Mood=Ind|Number=Sing|Person=1|Tense=Pres"],["6",".",".","PUNCT","PUNCT","5","5","punct","punct","","_"]]},"Oroch_grammar_73":{"comments":["# sent_id = Oroch_grammar_73","# text = Tā oroχo gisun wā!","# text[eng] = Speak the Oroch language!"],"rows":[["1","Tā","tā","PART","PRON","4","2","discourse","nsubj","IMP.PART","_"],["2","oroχo","oroχo","ADJ","VERB","3","0","amod","root","Oroch","_"],["3","gisun","gisun","NOUN","NOUN","4","2","obj","obl","language","Case=Nom"],["4","wā","wā","VERB","AUX","0","3","root","aux","speak.IMP","Mood=Imp"],["5","!","!","PUNCT","PUNCT","4","2","punct","punct","","_"]]},"Oroch_grammar_77":{"comments":["# sent_id = Oroch_grammar_77","# text = Minī agda mangī əʒi-či.","# text[eng] = My older brother caught fish."],"rows":[["1","Minī","bi","PRON","NOUN","4","2","nsubj","nsubj","1SG","Case=Nom|Number=Sing|Person=1|PronType=Prs"],["2","agda","agda","NOUN","VERB","1","0","appos","root","older.brother","_"],["3","mangī","mangī","NOUN","PART","4","2","obj","advmod","fish","Case=Nom"],["4","əʒi-či","əʒi","VERB","ADV","0","2","root","advmod","catch-PST","Mood=Ind|Number=Sing|Person=3|Tense=Past"],["5",".",".","PUNCT","PUNCT","4","4","punct","punct","","_"]]},"Oroch_grammar_80":{"comments":["# sent_id = Oroch_grammar_80","# text = Mangī əʒi-mi","# text[eng] = I catch fish."],"rows":[["1","Mangī","mangī","NOUN","VERB","2","0","obj","root","fish","Case=Nom"],["2","əʒi-mi","əʒi","VERB","ADJ","0","1","root","advcl","catch-PRS","Mood=Ind|Number=Sing|Person=1|Tense=Pres"]]},"Oroch_grammar_82":{"comments":["# sent_id = Oroch_grammar_82","# text = Dū wā-mi","# text[eng] = I build a house."],"rows":[["1","Dū","dū","NOUN","NOUN","2","0","obj","root","house","Case=Nom"],["2","wā-mi","wā","VERB","ADJ","0","1","root","amod","build-PRS","Mood=Ind|Number=Sing|Person=1|Tense=Pres"]]},"Oroch_grammar_81":{"comments":["# sent_id = Oroch_grammar_81","# text = Ujəχə wā-mi","# text[eng] = I hunt animals."],"rows":[["1","Ujəχə","ujəχə","NOUN","NOUN","2","2","obj","nsubj","animal","Case=Nom"],["2","wā-mi","wā","VERB","ADJ","0","0","root","root","hunt-PRS","Mood=Ind|Number=Sing|Person=1|Tense=Pres"]]},"Oroch_grammar_78":{"comments":["# sent_id = Oroch_grammar_78","# text = Udə əm-mi.","# text[eng] = Rain is coming."],"rows":[["1","Udə","udə","NOUN","NOUN","2","0","nsubj","root","rain","Case=Nom"],["2","əm-mi","əm","VERB","AUX","0","1","root","parataxis","come-PRS","Mood=Ind|Number=Sing|Person=3|Tense=Pres"],["3",".",".","PUNCT","PUNCT","2","2","punct","punct","","_"]]},"Oroch_grammar_83":{"comments":["# sent_id = Oroch_grammar_83","# text = Minī dʒə-mi","# text[eng] = I eat."],"rows":[["1","Minī","bi","PRON","NOUN","2","0","nsubj","root","1SG","Case=Nom|Number=Sing|Person=1|PronType=Prs"],["2","dʒə-mi","dʒə","VERB","ADJ","0","1","root","amod","eat-PRS","Mood=Ind|Number=Sing|Person=1|Tense=Pres"]]},"Oroch_grammar_84":{"comments":["# sent_id = Oroch_grammar_84","# text = Minī dʒə-či","# text[eng] = I ate."],"rows":[["1","Minī","bi","PRON","NOUN","2","0","nsubj","root","1SG","Case=Nom|Number=Sing|Person=1|PronType=Prs"],["2","dʒə-či","dʒə","VERB","PRON","0","1","root","advmod","eat-PST","Mood=Ind|Number=Sing|Person=1|Tense=Past"]]},"Oroch_grammar_79":{"comments":["# sent_id = Oroch_grammar_79","# text = Təŋə mūkə.","# text[eng] = The sky is cold."],"rows":[["1","Təŋə","təŋə","NOUN","NOUN","0","2","root","nsubj","sky","Case=Nom"],["2","mūkə","mūkə","ADJ","VERB","1","0","amod","root","cold","Degree=Pos"],["3",".",".","PUNCT","PUNCT","1","2","punct","punct","","_"]]},"Oroch_grammar_74":{"comments":["# sent_id = Oroch_grammar_74","# text = Mūkə dē","# text[eng] = Cold water"],"rows":[["1","Mūkə","mūkə","ADJ","NOUN","2","2","amod","nsubj","cold","_"],["2","dē","dē","NOUN","VERB","0","0","root","root","water","Case=Nom"]]},"Oroch_grammar_76":{"comments":["# sent_id = Oroch_grammar_76","# text = Sōkto əməŋki.","# text[eng] = The fire is big."],"rows":[["1","Sōkto","sōkto","NOUN","VERB","0","0","root","root","fire","Case=Nom"],["2","əməŋki","əməŋki","ADJ","NOUN","1","1","amod","nsubj","big","Degree=Pos"],["3",".",".","PUNCT","PUNCT","1","1","punct","punct","","_"]]}};
+const TREEBANK = "Oroch-GDUD";
+const labels = Object.keys(M).sort();
+const tbl = document.getElementById('tbl');
+
+let maxV = 1;
+for (const g of labels)
+  for (const p of labels)
+    if (g !== p && M[g] && M[g][p]) maxV = Math.max(maxV, M[g][p]);
+
+const hrow = tbl.insertRow();
+const corner = document.createElement('th');
+corner.className = 'rh';
+corner.textContent = 'gold \ pred';
+hrow.appendChild(corner);
+for (const p of labels) {
+  const th = document.createElement('th');
+  th.className = 'col-label';
+  th.textContent = p;
+  hrow.appendChild(th);
+}
+
+let sel = null;
+for (const g of labels) {
+  const row = tbl.insertRow();
+  const rh = document.createElement('th');
+  rh.className = 'rh';
+  rh.textContent = g;
+  row.appendChild(rh);
+  for (const p of labels) {
+    const td = row.insertCell();
+    const cnt = (M[g] && M[g][p]) || 0;
+    td.textContent = cnt || '';
+    if (g === p) {
+      td.className = 'diag';
+      td.title = cnt + ' correct';
+    } else if (cnt > 0) {
+      const t = cnt / maxV;
+      const ch = Math.round(255 * (1 - t * 0.8));
+      td.style.background = 'rgb(255,' + ch + ',' + ch + ')';
+      td.id = g + '--' + p;
+      td.className = 'click';
+      td.title = 'gold:' + g + ' → pred:' + p + ': ' + cnt;
+      td.addEventListener('click', (function(gl, pl, c, cell) {
+        return function() { show(gl, pl, c, cell); };
+      })(g, p, cnt, td));
+    }
+  }
+}
+
+function show(gL, pL, cnt, cell) {
+  history.replaceState(null, '', '#' + gL + '--' + pL);
+  if (sel) sel.classList.remove('sel');
+  cell.classList.add('sel');
+  sel = cell;
+  document.getElementById('sel-hdr').textContent =
+    'gold: ' + gL + '  →  pred: ' + pL + '  (' + cnt + ' sentence' + (cnt !== 1 ? 's' : '') + ')';
+  document.getElementById('sentences-section').scrollIntoView({ behavior: 'smooth' });
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  const corpus = (TREEBANK.startsWith('UD_') ? TREEBANK : 'UD_' + TREEBANK) + '@2.18';
+  const sents = S[gL + '→' + pL] || [];
+  for (const [sid, tids] of sents) {
+    const sent = SENTS[sid] || {};
+    const grewUrl = 'https://universal.grew.fr/?corpus=' + corpus +
+      '&request=' + encodeURIComponent('pattern { meta.sent_id = "' + sid + '" }');
+    const d = document.createElement('div');
+    d.className = 'pair';
+    d.innerHTML =
+      '<div class="pair-id"><a href="' + grewUrl + '" target="_blank">' + esc(sid) + '</a></div>' +
+      '<div style="overflow-x:auto">' + renderTable(sent.comments, sent.rows, tids) + '</div>';
+    list.appendChild(d);
+  }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+const HDRS = ["ID", "FORM", "LEMMA", "UPOS", "UPOS·p", "HEAD", "HEAD·p", "DEPREL", "DEPREL·p", "Gloss", "FEATS"];
+const PRED_COLS = new Set([4, 6, 8]);
+const PRED_GOLD = new Map([[4, 3], [6, 5], [8, 7]]);
+
+function renderTable(comments, rows, tokenIds) {
+  const ids = new Set(tokenIds || []);
+  let h = '';
+  if (comments && comments.length)
+    h += '<div class="sent-comments">' + comments.map(esc).join('<br>') + '</div>';
+  h += '<table class="sent-tbl"><thead><tr>';
+  HDRS.forEach((hdr, i) => {
+    h += '<th' + (PRED_COLS.has(i) ? ' class="pred-col"' : '') + '>' + esc(hdr) + '</th>';
+  });
+  h += '</tr></thead><tbody>';
+  for (const row of rows) {
+    const hl = ids.has(row[0]);
+    h += '<tr' + (hl ? ' class="hl-line"' : '') + '>';
+    row.forEach((cell, i) => {
+      const goldIdx = PRED_GOLD.get(i);
+      const mismatch = goldIdx !== undefined && cell !== row[goldIdx];
+      const cls = (PRED_COLS.has(i) ? 'pred-col' : '') + (mismatch ? ' mismatch' : '');
+      h += '<td' + (cls.trim() ? ' class="' + cls.trim() + '"' : '') + '>' + esc(cell) + '</td>';
+    });
+    h += '</tr>';
+  }
+  h += '</tbody></table>';
+  return h;
+}
+
+if (location.hash) {
+  const cell = document.getElementById(location.hash.slice(1));
+  if (cell) { cell.click(); cell.scrollIntoView({ behavior: 'instant', block: 'center' }); }
+}
+</script>
+</body>
+</html>
