@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>UPOS &mdash; Gorontalo-BungoLoLombi</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+Tangut&display=swap">
+<style>
+* { box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
+#hdr { padding: 8px 16px; background: #2c3e50; color: #fff; flex-shrink: 0; position: relative; }
+#hdr h1 { margin: 0; font-size: 1.1em; }
+#hdr a.back { position: absolute; top: 8px; right: 16px; color: #cfe3f2; font-size: 0.85em; text-decoration: none; }
+#hdr a.back:hover { text-decoration: underline; }
+#stats { margin: 2px 0 0; font-size: 0.8em; opacity: 0.8; }
+#matrix-section { padding: 12px 16px; overflow-x: auto; }
+#sentences-section { padding: 12px 16px; border-top: 2px solid #bbb; }
+#sel-hdr { font-weight: bold; margin-bottom: 10px; color: #2c3e50; min-height: 1.4em; }
+#placeholder { color: #aaa; font-style: italic; padding: 40px; text-align: center; }
+table { border-collapse: collapse; font-size: 0.75em; }
+th { background: #ecf0f1; position: sticky; top: 0; z-index: 1; padding: 4px 6px; border: 1px solid #bbb; }
+th.rh { text-align: left; position: sticky; left: 0; z-index: 2; }
+th.col-label { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; vertical-align: bottom; height: 120px; padding: 4px 2px; text-align: left; }
+td { padding: 3px 8px; border: 1px solid #ddd; text-align: right; min-width: 36px; font-variant-numeric: tabular-nums; }
+td.diag { background: #f0f0f0; color: #999; }
+td.click { cursor: pointer; }
+td.click:hover { filter: brightness(0.88); }
+td.sel { outline: 2px solid #2980b9; outline-offset: -2px; }
+.pair { margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
+.pair-id { background: #f8f8f8; padding: 3px 10px; font-size: 0.82em; color: #555; border-bottom: 1px solid #ddd; font-family: monospace; }
+.pair-id a { color: #2980b9; text-decoration: underline; font-size: 1.1em; }
+.pair-id a:hover { color: #1a5276; }
+.sent-comments { font-family: monospace, "Noto Serif Tangut"; font-size: 0.73em; color: #555; padding: 3px 8px; border-bottom: 1px solid #eee; }
+.sent-tbl { width: 100%; border-collapse: collapse; font-size: 0.72em; font-family: monospace, "Noto Serif Tangut"; }
+.sent-tbl th, .sent-tbl td { padding: 2px 6px; border: 1px solid #ddd; text-align: left; white-space: nowrap; }
+.sent-tbl th { background: #ecf0f1; font-family: system-ui, sans-serif; }
+.sent-tbl th.pred-col, .sent-tbl td.pred-col { background: #eaf4fb; }
+.sent-tbl th:nth-child(4), .sent-tbl td:nth-child(4),
+.sent-tbl th:nth-child(10), .sent-tbl td:nth-child(10),
+.sent-tbl th:nth-child(13), .sent-tbl td:nth-child(13) { border-left: 2px solid #aaa; }
+.sent-tbl th:nth-child(6), .sent-tbl td:nth-child(6),
+.sent-tbl th:nth-child(8), .sent-tbl td:nth-child(8) { border-left: 1.5px solid #aaa; }
+tr.hl-line td { background: #fffbcc !important; }
+tr.hl-line td.pred-col { background: #fff5a0 !important; }
+.sent-tbl td.mismatch { background: #fde8e8; }
+</style>
+</head>
+<body>
+<div id="hdr">
+  <a class="back" href="../index.html">&larr; Index</a>
+  <h1>Gorontalo-BungoLoLombi</h1>
+  <div id="stats">37 sents &middot; 195 tokens &middot; UPOS 72.3% &middot; UAS 68.7% &middot; LAS 48.2% &middot; CLAS 60.4% &middot; CORELAS 65.1% &middot; DEPREL 52.3%</div>
+</div>
+<div id="matrix-section"><table id="tbl"></table></div>
+<div id="sentences-section">
+  <div id="sel-hdr"></div>
+  <div id="list"><div id="placeholder">Click a confusion cell to see examples</div></div>
+</div>
+<script>
+const M = {"ADJ":{"ADJ":5,"VERB":2},"ADP":{"ADP":11,"AUX":4,"DET":1,"PART":23,"PRON":2,"PROPN":1,"SCONJ":1,"VERB":1},"ADV":{"ADV":4,"NOUN":4,"VERB":1},"AUX":{},"CCONJ":{"CCONJ":2},"DET":{"DET":7,"NOUN":2,"PRON":3},"NOUN":{"ADJ":3,"NOUN":52,"PART":1},"NUM":{"NUM":1},"PART":{"VERB":1},"PRON":{"PRON":7,"PROPN":1},"PROPN":{"NOUN":3,"PROPN":22},"SCONJ":{},"VERB":{"VERB":30}};
+const S = {"ADP→PART":[["12",["1"]],["13",["3"]],["14",["3"]],["15",["1"]],["16",["1","7"]]],"ADP→DET":[["9",["1"]]],"ADP→AUX":[["20",["1"]],["36",["1"]],["37",["3"]],["39",["3"]]],"ADP→SCONJ":[["22",["5"]]],"ADP→VERB":[["22",["7"]]],"ADP→PRON":[["27",["1"]],["38",["3"]]],"ADP→PROPN":[["33",["1"]]],"DET→PRON":[["10",["6"]],["4",["2","7"]]],"DET→NOUN":[["20",["3"]],["21",["8"]]],"ADV→NOUN":[["10",["7"]],["11",["6"]],["17",["5"]],["18",["6"]]],"ADV→VERB":[["22",["9"]]],"PROPN→NOUN":[["12",["2"]],["13",["4"]],["15",["2"]]],"ADJ→VERB":[["15",["3"]],["28",["4"]]],"NOUN→ADJ":[["20",["2"]],["21",["7"]],["22",["10"]]],"NOUN→PART":[["21",["6"]]],"PART→VERB":[["22",["3"]]],"PRON→PROPN":[["34",["1"]]]};
+const SENTS = {"12":{"comments":["# sent_id = 12","# text = Ti Bapu lo-pomulo binthe","# text_en = ‘Grandpa planted corn.’","# degree_of_spontaneity = elicited"],"rows":[["1","Ti","ti","ADP","PART","2","2","case","dep","pivot","Case=Piv|Gender=Fem"],["2","Bapu","Bapu","PROPN","NOUN","3","3","nsubj:agent","nsubj","grandpa","_"],["3","lo-pomulo","pomulo","VERB","VERB","0","0","root","root","actorvoice.realis-plant","Mood=Ind|Voice=Act"],["4","binthe","binthe","NOUN","NOUN","3","3","obj:patient","obj","corn","_"]]},"13":{"comments":["# sent_id = 13","# text = Binthe pilomulo li Bapu","# text_en = ‘Grandpa planted corn (corn is subject).’","# degree_of_spontaneity = elicited"],"rows":[["1","Binthe","binthe","NOUN","NOUN","2","2","nsubj:patient","obj","corn","_"],["2","pilomulo","pomulo","VERB","VERB","0","0","root","root","<patient.voice.rea>plant","Mood=Ind|Voice=Pat"],["3","li","li","ADP","PART","4","2","case","advmod","not.pivot","Case=Npiv|Gender=Fem"],["4","Bapu","Bapu","PROPN","NOUN","2","2","obj:agent","nsubj","grandpa","_"]]},"14":{"comments":["# sent_id = 14","# text = Ilengi pilo-pomulo li Bapu binthe","# text_en = ‘Grandpa planted corn in the field (field is subject)’","# degree_of_spontaneity = elicited"],"rows":[["1","Ilengi","ilengi","NOUN","NOUN","2","2","nsubj:instrument","iobj","field","_"],["2","pilo-pomulo","pomulo","VERB","VERB","0","0","root","root","locationvoice/undergoer2.rea-plant","Mood=Ind|Voice=Ivoc"],["3","li","li","ADP","PART","4","2","case","advmod","not.pivot","Case=Npiv|Gender=Fem"],["4","Bapu","Bapu","PROPN","PROPN","2","2","obj:agent","nsubj","grandpa","_"],["5","binthe","binthe","NOUN","NOUN","2","2","iobj:patient","obj","corn","_"]]},"15":{"comments":["# sent_id = 15","# text = Ti Nina kekengo daa","# text_en = ‘Nina is very flirty.’","# degree_of_spontaneity = elicited"],"rows":[["1","Ti","ti","ADP","PART","2","2","case","fixed","piv","Case=Piv|Gender=Fem"],["2","Nina","nina","PROPN","NOUN","3","3","nsubj","nsubj","name","_"],["3","kekengo","kekengo","ADJ","VERB","0","0","root","root","flirty","_"],["4","daa","daa","ADV","ADV","3","3","advmod","advmod","very","_"]]},"16":{"comments":["# sent_id = 16","# text = Ti Dewi lohama batade totolu londo le Hasan","# text_en = ‘Dewi took three goats from Hasan.’","# degree_of_spontaneity = elicited"],"rows":[["1","Ti","ti","ADP","PART","2","3","case","fixed","pivot","Case=Piv|Gender=Fem"],["2","Dewi","Dewi","PROPN","PROPN","3","3","nsubj:agent","nsubj","name","_"],["3","lohama","hama","VERB","VERB","0","0","root","root","actor.real-take","Mood=Ind|Voice=Act"],["4","batade","batade","NOUN","NOUN","3","3","obj:patient","obj","goat","_"],["5","totolu","totulu","NUM","NUM","4","4","nummod","nummod","three","_"],["6","londo","londo","ADP","ADP","8","3","case","obl","obl","_"],["7","le","le","ADP","PART","8","3","case","fixed","not.pivot","Case=Npiv|Gender=Masc"],["8","Hasan","Hasan","PROPN","PROPN","3","6","obl","nmod","name","_"]]},"9":{"comments":["# sent_id = 9","# text = Te Pulu lodehu","# text_en = ‘Pulu fell.’","# degree_of_spontaneity = elicited"],"rows":[["1","Te","te","ADP","DET","2","2","case","det","pivot.masc","Case=Piv|Gender=Masc"],["2","Pulu","pulu","PROPN","PROPN","3","3","nsubj:agent","nsubj","name","_"],["3","lodehu","dehu","VERB","VERB","0","0","root","root","actor.voice.real-push","Mood=Ind|Voice=Act"]]},"20":{"comments":["# sent_id = 20","# text = Ta kikino boyito lopiyaato bungo lo oyile olango","# text_en = ‘The child climbed the mango tree yesterday.’","# degree_of_spontaneity = elicited"],"rows":[["1","Ta","ta","ADP","AUX","2","4","clf","dep","human.marker","_"],["2","kikino","kikino","NOUN","ADJ","4","3","nsubj:agent","amod","small","_"],["3","boyito","boyito","DET","NOUN","2","4","det","nsubj","dem","PronType=Dem"],["4","lopiyaato","piyaato","VERB","VERB","0","0","root","root","AV.rea-climb","Mood=Ind|Voice=Act"],["5","bungo","bungo","NOUN","NOUN","4","4","obj:patient","compound","tree","_"],["6","lo","lo","ADP","ADP","7","5","case","case","npiv","Case=Gen"],["7","oyile","oyile","NOUN","NOUN","5","6","nmod","compound","mango","_"],["8","olango","olango","ADV","ADV","4","4","advmod","advmod","yesterday","_"]]},"36":{"comments":["# sent_id = 36","# text = Ti Dewi lo-tubu uponula","# text_en = \"Dewi cooked the fish\" (actor voice)","# degree_of_spontaneity = elicited"],"rows":[["1","Ti","ti","ADP","AUX","2","3","case","aux","PIV.FEM","Case=Piv|Gender=Fem"],["2","Dewi","Dewi","PROPN","PROPN","3","3","nsubj:agent","nsubj","Dewi","_"],["3","lo-tubu","tubu","VERB","VERB","0","0","root","root","AV-cook","Mood=Ind|Voice=Act"],["4","uponula","uponula","NOUN","NOUN","3","3","obj:patient","obj","fish","_"]]},"37":{"comments":["# sent_id = 37","# text = Uponula tilubu li Dewi","# text_en = \"Dewi cooked the fish\" (patient voice)","# degree_of_spontaneity = elicited"],"rows":[["1","Uponula","uponula","NOUN","NOUN","2","2","nsubj:patient","obj","fish","_"],["2","tilubu","tubu","VERB","VERB","0","0","root","root","<PV>-cook","Mood=Ind|Voice=Pat"],["3","li","li","ADP","AUX","4","2","case","aux","NPIV.FEM","Case=Npiv|Gender=Fem"],["4","Dewi","Dewi","PROPN","PROPN","2","2","obj:agent","nsubj","Dewi","_"]]},"39":{"comments":["# sent_id = 39","# text = Uponula tilubu li Dewi lo bulonggo","# text_en = \"Dewi cooked the fish in the pan\" (patient voice)","# degree_of_spontaneity = elicited"],"rows":[["1","Uponula","uponula","NOUN","NOUN","2","2","nsubj:patient","obj","fish","_"],["2","tilubu","tubu","VERB","VERB","0","0","root","root","","Mood=Ind|Voice=Pat"],["3","li","li","ADP","AUX","4","2","case","aux","NPIV.FEM","Case=Npiv|Gender=Fem"],["4","Dewi","Dewi","PROPN","PROPN","2","2","obj:agent","nsubj","Dewi","_"],["5","lo","lo","ADP","ADP","6","6","case","case","","Case=Npiv"],["6","bulonggo","bulonggo","NOUN","NOUN","2","2","iobj:instrument","obl","pan","_"]]},"22":{"comments":["# sent_id = 22","# text = Wau hemomiyaato mayi bungo lo oyile to wau donggo kikino","# text_en = ‘I used to climb trees when I was a child.’","# degree_of_spontaneity = elicited"],"rows":[["1","Wau","wau","PRON","PRON","2","2","nsubj:agent","nsubj","1sg","Number=Sing|Person=1|PronType=Prs"],["2","hemomiyaato","piyaato","VERB","VERB","0","0","root","root","prog-clim","Aspect=Prog|Voice=Act"],["3","mayi","mayi","PART","VERB","2","2","dep","xcomp","?","_"],["4","bungo","bungo","NOUN","NOUN","2","3","obj:patient","obj","tree","_"],["5","lo","lo","ADP","SCONJ","6","2","case","mark","connector","_"],["6","oyile","oyile","NOUN","NOUN","4","7","nmod","compound","mango","_"],["7","to","to","ADP","VERB","10","9","case","xcomp","?","_"],["8","wau","wau","PRON","PRON","10","9","nsubj","nsubj","1sg","Number=Sing|Person=1|PronType=Prs"],["9","donggo","donggo","ADV","VERB","10","5","advmod","dep","still","_"],["10","kikino","kikino","NOUN","ADJ","2","9","obl","amod","small","_"]]},"27":{"comments":["# sent_id = 27","# text = Te Hasan totola to tambati mo’opotala","# text_en = ‘Hasan lives in a dangerous place.’","# degree_of_spontaneity = elicited"],"rows":[["1","Te","te","ADP","PRON","2","3","case","nsubj","piv.masc","Case=Piv|Gender=Masc"],["2","Hasan","Hasan","PROPN","PROPN","3","1","nsubj","appos","hasan","_"],["3","totola","totola","VERB","VERB","0","0","root","root","live","_"],["4","to","to","ADP","ADP","5","5","case","case","obl","_"],["5","tambati","tambati","NOUN","NOUN","3","3","obl","obl","place","_"],["6","mo’opotala","opotala","ADJ","ADJ","5","5","amod","amod","irr-dangerous","Mood=Irr"]]},"38":{"comments":["# sent_id = 38","# text = Bulonggo pilo-tubu li Dewi uponula","# text_en = \"Dewi cooked the fish in the pan\" (instrument voice)","# degree_of_spontaneity = elicited"],"rows":[["1","Bulonggo","bulonggo","NOUN","NOUN","2","2","nsubj:instrument","obl","pan","_"],["2","pilo-tubu","tubu","VERB","VERB","0","0","root","root","IV-cook","Mood=Ind|Voice=Ivoc"],["3","li","li","ADP","PRON","4","2","case","nsubj","NPIV.FEM","Case=Npiv|Gender=Fem"],["4","Dewi","Dewi","PROPN","PROPN","2","3","obj:agent","appos","Dewi","_"],["5","uponula","uponula","NOUN","NOUN","2","2","iobj:patient","obj","fish","_"]]},"33":{"comments":["# sent_id = 33","# text = Te Pulu londo Limutu","# text_en = \"Pulu is from Limboto\"","# degree_of_spontaneity = elicited"],"rows":[["1","Te","te","ADP","PROPN","2","2","case","appos","PIV.PROPN.MASC","Case=Piv|Gender=Masc"],["2","Pulu","Pulu","PROPN","PROPN","4","0","nsubj","root","Pulu","_"],["3","londo","londo","ADP","ADP","4","2","case","case","from","_"],["4","Limutu","Limutu","PROPN","PROPN","0","3","root","obj","Limboto","_"]]},"10":{"comments":["# sent_id = 10","# text = Wau longohi salak ode mongololai boyito olango","# text_en = ‘I gave those boys snake fruits yesterday.’","# degree_of_spontaneity = elicited"],"rows":[["1","Wau","wau","PRON","PRON","2","2","nsubj:agent","nsubj","1sg","Number=Sing|Person=1|PronType=Prs"],["2","longohi","ohi","VERB","VERB","0","0","root","root","act.voice.real-give","Mood=Ind|Voice=Act"],["3","salak","salak","NOUN","NOUN","2","2","obj:patient","obj","snake.fruit","_"],["4","ode","ode","ADP","ADP","5","3","case","case","obl","_"],["5","mongololai","lolai","NOUN","NOUN","2","6","obl","compound","plural=boy","Number=Plur"],["6","boyito","boyito","DET","PRON","5","2","det","obj","dem","PronType=Dem"],["7","olango","olango","ADV","NOUN","2","2","advmod","advmod","yesterday","_"]]},"4":{"comments":["# sent_id = 4","# text = Tabuwa boyito lohama binthe londo talai boyito","# text_en = ‘The woman took the corn from the man.’ (actor voice, realis)","# degree_of_spontaneity = elicited"],"rows":[["1","Tabuwa","tabuwa","NOUN","NOUN","3","3","nsubj:agent","nsubj","woman","_"],["2","boyito","boyito","DET","PRON","1","3","det","obj","dem","PronType=Dem"],["3","lohama","hama","VERB","VERB","0","0","root","root","actor.voice.real-take","Mood=Ind|Voice=Act"],["4","binthe","binthe","NOUN","NOUN","3","3","obj:patient","obj","corn","_"],["5","londo","londo","ADP","ADP","6","4","case","case","obl","_"],["6","talai","talai","NOUN","NOUN","3","5","obl","nmod","man","_"],["7","boyito","boyito","DET","PRON","6","5","det","obj","dem","PronType=Dem"]]},"21":{"comments":["# sent_id = 21","# text = Bungo lo oyile piliyaato lo ta kikino boyito","# text_en = ‘The child climbed the tree.’ (tree is subject)","# degree_of_spontaneity = elicited"],"rows":[["1","Bungo","bungo","NOUN","NOUN","4","4","nsubj:patient","nsubj","tree","_"],["2","lo","lo","ADP","PART","3","4","case","fixed","npiv","Case=Gen"],["3","oyile","oyile","NOUN","NOUN","1","4","nmod","obj","mango","_"],["4","piliyaato","piyaato","VERB","VERB","0","0","root","root","<PV.real>","Mood=Ind|Voice=Pat"],["5","lo","lo","ADP","PART","7","4","case","fixed","notpivot","Case=Npiv"],["6","ta","ta","NOUN","PART","7","7","clf","fixed","human.marker","_"],["7","kikino","kikino","NOUN","ADJ","4","8","obj:agent","amod","small","_"],["8","boyito","boyito","DET","NOUN","7","4","det","obj","dem","PronType=Dem"]]},"11":{"comments":["# sent_id = 11","# text = Salak yilohiu ode mongololai boyito olango","# text_en = ‘I gave those boys snake fruit yesterday.’ (snake fruit is subject)","# degree_of_spontaneity = elicited"],"rows":[["1","Salak","salak","NOUN","NOUN","2","2","nsubj:patient","obj","snake.fruit","_"],["2","yilohiu","ohi","VERB","VERB","0","0","root","root","<patient.voice.real>give-1.sg","Mood=Ind|Voice=Pat"],["3","ode","ode","ADP","ADP","4","2","case","case","obl","_"],["4","mongololai","lolai","NOUN","NOUN","2","3","obl","nmod","plural=boy","Number=Plur"],["5","boyito","boyito","DET","DET","4","4","det","det","dem","PronType=Dem"],["6","olango","olango","ADV","NOUN","2","2","advmod","obl","yesterday","_"]]},"17":{"comments":["# sent_id = 17","# text = Tabuwa boyito lomindao tete olango","# text_en = ‘The woman picked up the cat yesterday.’ (actor voice)","# degree_of_spontaneity = elicited"],"rows":[["1","Tabuwa","tabuwa","NOUN","NOUN","3","3","nsubj:agent","nsubj","woman","_"],["2","boyito","boyito","DET","DET","1","1","det","det","DEM","PronType=Dem"],["3","lomindao","mindao","VERB","VERB","0","0","root","root","AV-pick.up","Mood=Ind|Voice=Act"],["4","tete","tete","NOUN","NOUN","3","3","obj:patient","obj","cat","_"],["5","olango","olango","ADV","NOUN","3","3","obl","advmod","yesterday","_"]]},"18":{"comments":["# sent_id = 18","# text = Tete bilindao lo tabuwa boyito olango","# text_en = ‘The woman picked up the cat yesterday.’ (UV1 voice)","# degree_of_spontaneity = elicited"],"rows":[["1","Tete","tete","NOUN","NOUN","2","2","nsubj:patient","obj","cat","_"],["2","bilindao","mindao","VERB","VERB","0","0","root","root","<PV>pick.up","Mood=Ind|Voice=Pat"],["3","lo","lo","ADP","PART","4","2","case","fixed","npiv","Case=Npiv"],["4","tabuwa","tabuwa","NOUN","NOUN","2","2","obj:agent","nmod","woman","_"],["5","boyito","boyito","DET","DET","4","4","det","det","DEM","PronType=Dem"],["6","olango","olango","ADV","NOUN","2","2","obl","advmod","yesterday","_"]]},"28":{"comments":["# sent_id = 28","# text = Longola tabung boyito mololo","# text_en = \"Why is the girl sad?\"","# degree_of_spontaneity = elicited"],"rows":[["1","Longola","longola","ADV","ADV","4","4","advmod","advmod","why","_"],["2","tabung","tabung","NOUN","NOUN","4","4","nsubj","nsubj","girl","_"],["3","boyito","boyito","DET","DET","2","2","det","det","DEM","PronType=Dem"],["4","mololo","lolo","ADJ","VERB","0","0","root","root","sad-irr","Mood=Irr"]]},"34":{"comments":["# sent_id = 34","# text = Tiyo lolangi to bulalo","# text_en = \"He swam across the lake\"","# degree_of_spontaneity = elicited"],"rows":[["1","Tiyo","tiyo","PRON","PROPN","2","2","nsubj:agent","nsubj","3.SG.PIV","Case=Nom|Number=Sing|Person=3|PronType=Prs"],["2","lolangi","langi","VERB","VERB","0","0","root","root","","Mood=Ind|Voice=Act"],["3","to","to","ADP","ADP","4","4","case","case","","_"],["4","bulalo","bulalo","NOUN","NOUN","2","2","obl","obj","lake","_"]]}};
+const TREEBANK = "Gorontalo-BungoLoLombi";
+const labels = Object.keys(M).sort();
+const tbl = document.getElementById('tbl');
+
+let maxV = 1;
+for (const g of labels)
+  for (const p of labels)
+    if (g !== p && M[g] && M[g][p]) maxV = Math.max(maxV, M[g][p]);
+
+const hrow = tbl.insertRow();
+const corner = document.createElement('th');
+corner.className = 'rh';
+corner.textContent = 'gold \ pred';
+hrow.appendChild(corner);
+for (const p of labels) {
+  const th = document.createElement('th');
+  th.className = 'col-label';
+  th.textContent = p;
+  hrow.appendChild(th);
+}
+
+let sel = null;
+for (const g of labels) {
+  const row = tbl.insertRow();
+  const rh = document.createElement('th');
+  rh.className = 'rh';
+  rh.textContent = g;
+  row.appendChild(rh);
+  for (const p of labels) {
+    const td = row.insertCell();
+    const cnt = (M[g] && M[g][p]) || 0;
+    td.textContent = cnt || '';
+    if (g === p) {
+      td.className = 'diag';
+      td.title = cnt + ' correct';
+    } else if (cnt > 0) {
+      const t = cnt / maxV;
+      const ch = Math.round(255 * (1 - t * 0.8));
+      td.style.background = 'rgb(255,' + ch + ',' + ch + ')';
+      td.id = g + '--' + p;
+      td.className = 'click';
+      td.title = 'gold:' + g + ' → pred:' + p + ': ' + cnt;
+      td.addEventListener('click', (function(gl, pl, c, cell) {
+        return function() { show(gl, pl, c, cell); };
+      })(g, p, cnt, td));
+    }
+  }
+}
+
+function show(gL, pL, cnt, cell) {
+  history.replaceState(null, '', '#' + gL + '--' + pL);
+  if (sel) sel.classList.remove('sel');
+  cell.classList.add('sel');
+  sel = cell;
+  document.getElementById('sel-hdr').textContent =
+    'gold: ' + gL + '  →  pred: ' + pL + '  (' + cnt + ' sentence' + (cnt !== 1 ? 's' : '') + ')';
+  document.getElementById('sentences-section').scrollIntoView({ behavior: 'smooth' });
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  const corpus = (TREEBANK.startsWith('UD_') ? TREEBANK : 'UD_' + TREEBANK) + '@2.18';
+  const sents = S[gL + '→' + pL] || [];
+  for (const [sid, tids] of sents) {
+    const sent = SENTS[sid] || {};
+    const grewUrl = 'https://universal.grew.fr/?corpus=' + corpus +
+      '&request=' + encodeURIComponent('pattern { meta.sent_id = "' + sid + '" }');
+    const d = document.createElement('div');
+    d.className = 'pair';
+    d.innerHTML =
+      '<div class="pair-id"><a href="' + grewUrl + '" target="_blank">' + esc(sid) + '</a></div>' +
+      '<div style="overflow-x:auto">' + renderTable(sent.comments, sent.rows, tids) + '</div>';
+    list.appendChild(d);
+  }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+const HDRS = ["ID", "FORM", "LEMMA", "UPOS", "UPOS·p", "HEAD", "HEAD·p", "DEPREL", "DEPREL·p", "Gloss", "FEATS"];
+const PRED_COLS = new Set([4, 6, 8]);
+const PRED_GOLD = new Map([[4, 3], [6, 5], [8, 7]]);
+
+function renderTable(comments, rows, tokenIds) {
+  const ids = new Set(tokenIds || []);
+  let h = '';
+  if (comments && comments.length)
+    h += '<div class="sent-comments">' + comments.map(esc).join('<br>') + '</div>';
+  h += '<table class="sent-tbl"><thead><tr>';
+  HDRS.forEach((hdr, i) => {
+    h += '<th' + (PRED_COLS.has(i) ? ' class="pred-col"' : '') + '>' + esc(hdr) + '</th>';
+  });
+  h += '</tr></thead><tbody>';
+  for (const row of rows) {
+    const hl = ids.has(row[0]);
+    h += '<tr' + (hl ? ' class="hl-line"' : '') + '>';
+    row.forEach((cell, i) => {
+      const goldIdx = PRED_GOLD.get(i);
+      const mismatch = goldIdx !== undefined && cell !== row[goldIdx];
+      const cls = (PRED_COLS.has(i) ? 'pred-col' : '') + (mismatch ? ' mismatch' : '');
+      h += '<td' + (cls.trim() ? ' class="' + cls.trim() + '"' : '') + '>' + esc(cell) + '</td>';
+    });
+    h += '</tr>';
+  }
+  h += '</tbody></table>';
+  return h;
+}
+
+if (location.hash) {
+  const cell = document.getElementById(location.hash.slice(1));
+  if (cell) { cell.click(); cell.scrollIntoView({ behavior: 'instant', block: 'center' }); }
+}
+</script>
+</body>
+</html>
