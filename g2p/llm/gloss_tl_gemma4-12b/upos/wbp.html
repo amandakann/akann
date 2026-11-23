@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>UPOS &mdash; Warlpiri-UFAL</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+Tangut&display=swap">
+<style>
+* { box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
+#hdr { padding: 8px 16px; background: #2c3e50; color: #fff; flex-shrink: 0; position: relative; }
+#hdr h1 { margin: 0; font-size: 1.1em; }
+#hdr a.back { position: absolute; top: 8px; right: 16px; color: #cfe3f2; font-size: 0.85em; text-decoration: none; }
+#hdr a.back:hover { text-decoration: underline; }
+#stats { margin: 2px 0 0; font-size: 0.8em; opacity: 0.8; }
+#matrix-section { padding: 12px 16px; overflow-x: auto; }
+#sentences-section { padding: 12px 16px; border-top: 2px solid #bbb; }
+#sel-hdr { font-weight: bold; margin-bottom: 10px; color: #2c3e50; min-height: 1.4em; }
+#placeholder { color: #aaa; font-style: italic; padding: 40px; text-align: center; }
+table { border-collapse: collapse; font-size: 0.75em; }
+th { background: #ecf0f1; position: sticky; top: 0; z-index: 1; padding: 4px 6px; border: 1px solid #bbb; }
+th.rh { text-align: left; position: sticky; left: 0; z-index: 2; }
+th.col-label { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; vertical-align: bottom; height: 120px; padding: 4px 2px; text-align: left; }
+td { padding: 3px 8px; border: 1px solid #ddd; text-align: right; min-width: 36px; font-variant-numeric: tabular-nums; }
+td.diag { background: #f0f0f0; color: #999; }
+td.click { cursor: pointer; }
+td.click:hover { filter: brightness(0.88); }
+td.sel { outline: 2px solid #2980b9; outline-offset: -2px; }
+.pair { margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
+.pair-id { background: #f8f8f8; padding: 3px 10px; font-size: 0.82em; color: #555; border-bottom: 1px solid #ddd; font-family: monospace; }
+.pair-id a { color: #2980b9; text-decoration: underline; font-size: 1.1em; }
+.pair-id a:hover { color: #1a5276; }
+.sent-comments { font-family: monospace, "Noto Serif Tangut"; font-size: 0.73em; color: #555; padding: 3px 8px; border-bottom: 1px solid #eee; }
+.sent-tbl { width: 100%; border-collapse: collapse; font-size: 0.72em; font-family: monospace, "Noto Serif Tangut"; }
+.sent-tbl th, .sent-tbl td { padding: 2px 6px; border: 1px solid #ddd; text-align: left; white-space: nowrap; }
+.sent-tbl th { background: #ecf0f1; font-family: system-ui, sans-serif; }
+.sent-tbl th.pred-col, .sent-tbl td.pred-col { background: #eaf4fb; }
+.sent-tbl th:nth-child(4), .sent-tbl td:nth-child(4),
+.sent-tbl th:nth-child(10), .sent-tbl td:nth-child(10),
+.sent-tbl th:nth-child(13), .sent-tbl td:nth-child(13) { border-left: 2px solid #aaa; }
+.sent-tbl th:nth-child(6), .sent-tbl td:nth-child(6),
+.sent-tbl th:nth-child(8), .sent-tbl td:nth-child(8) { border-left: 1.5px solid #aaa; }
+tr.hl-line td { background: #fffbcc !important; }
+tr.hl-line td.pred-col { background: #fff5a0 !important; }
+.sent-tbl td.mismatch { background: #fde8e8; }
+</style>
+</head>
+<body>
+<div id="hdr">
+  <a class="back" href="../index.html">&larr; Index</a>
+  <h1>Warlpiri-UFAL</h1>
+  <div id="stats">54 sents &middot; 309 tokens &middot; UPOS 92.6% &middot; UAS 82.2% &middot; LAS 74.1% &middot; CLAS 73.9% &middot; CORELAS 78.7% &middot; DEPREL 81.9%</div>
+</div>
+<div id="matrix-section"><table id="tbl"></table></div>
+<div id="sentences-section">
+  <div id="sel-hdr"></div>
+  <div id="list"><div id="placeholder">Click a confusion cell to see examples</div></div>
+</div>
+<script>
+const M = {"ADJ":{"ADJ":6,"NOUN":2},"ADP":{"NOUN":1},"AUX":{"AUX":31,"PART":1,"PRON":2,"VERB":16},"NOUN":{"NOUN":105},"PART":{},"PRON":{"PRON":22},"PROPN":{"PROPN":1},"PUNCT":{"PUNCT":55},"VERB":{"NOUN":1,"VERB":66}};
+const S = {"ADJ→NOUN":[["3.12b",["3"]],["3.12c",["5"]]],"AUX→VERB":[["3.15a",["2"]],["3.15b",["2"]],["3.40d",["2"]],["3.48",["2"]],["3.49",["2"]]],"AUX→PRON":[["3.45",["2"]],["3.55d",["2"]]],"AUX→PART":[["3.55a",["2"]]],"ADP→NOUN":[["3.41",["5"]]],"VERB→NOUN":[["3.55cb",["3"]]]};
+const SENTS = {"3.12b":{"comments":["# sent_id = 3.12b","# source = Hale, 1973; Simpson, 1991","# text = Wajilipinyi ka witangku maliki kurdungku.","# gloss = running-attack-NONPAST PRES small-ERG dog(ABS) child-ERG","# text_en = The small child is chasing the dog."],"rows":[["1","Wajilipinyi","wajilipi","VERB","VERB","0","0","root","root","running-attack-NONPAST","Tense=Pres"],["2","ka","ka","AUX","AUX","1","1","aux","aux","PRES","Tense=Pres"],["3","witangku","wita","ADJ","NOUN","4","1","amod","nsubj","small-ERG","Case=Erg"],["4","maliki","maliki","NOUN","NOUN","1","1","obj","obj","dog.ABS","Case=Abs|Number=Sing"],["5","kurdungku","kurdu","NOUN","NOUN","1","1","nsubj","nsubj","child-ERG","Case=Erg|Number=Sing"],["6",".",".","PUNCT","PUNCT","1","1","punct","punct",".","_"]]},"3.12c":{"comments":["# sent_id = 3.12c","# source = Hale, 1973; Simpson, 1991","# text = Maliki ka kurdungku wajilipinyi witangku.","# gloss = dog(ABS) PRES child-ERG running-attack-NONPAST small-ERG","# text_en = The small child id chasing the dog."],"rows":[["1","Maliki","maliki","NOUN","NOUN","4","4","obj","obj","dog.ABS","Case=Abs|Number=Sing"],["2","ka","ka","AUX","AUX","4","4","aux","aux","PRES","Tense=Pres"],["3","kurdungku","kurdu","NOUN","NOUN","4","4","nsubj","nsubj","child-ERG","Case=Erg|Number=Sing"],["4","wajilipinyi","wajilipi","VERB","VERB","0","0","root","root","running-attack-NONPAST","Tense=Pres"],["5","witangku","wita","ADJ","NOUN","3","3","amod","appos","small-ERG","Case=Erg"],["6",".",".","PUNCT","PUNCT","5","4","punct","punct",".","_"]]},"3.15a":{"comments":["# sent_id = 3.15a","# source = Hale, 1973; Simpson, 1991","# text = Nyanyi karnapalangu wawirrijarra.","# gloss = see-NONPAST PRES-1SG(SUBJ)-3DU(OBJ) kangaroo-DU(ABS)","# text_en = I see two kangaroos."],"rows":[["1","Nyanyi","nya","VERB","VERB","0","2","root","xcomp","see-NONPAST","Tense=Pres"],["2","karnapalangu","ka","AUX","VERB","1","0","aux","root","PRES-1SG(SUBJ)-3DU(OBJ)","Number=Sing|Number[obj]=Dual|Person=1|Person[obj]=3|Tense=Pres"],["3","wawirrijarra","wawirri","NOUN","NOUN","1","2","obj","obj","kangaroo-DU(ABS)","Case=Abs|Number=Dual"],["4",".",".","PUNCT","PUNCT","1","2","punct","punct",".","_"]]},"3.15b":{"comments":["# sent_id = 3.15b","# source = Hale, 1973; Simpson, 1991","# text = Nyanyi karnapalangu wawirrijarra ngajulurlu.","# gloss = see-NONPAST PRES-1SG(SUBJ)-3DU(OBJ) kangaroo-DU(ABS) 1SG-ERG","# text_en = I see two kangaroos."],"rows":[["1","Nyanyi","nya","VERB","VERB","0","2","root","xcomp","see-NONPAST","Tense=Pres"],["2","karnapalangu","ka","AUX","VERB","1","0","aux","root","PRES-1SG(SUBJ)-3DU(OBJ)","Number=Sing|Number[obj]=Dual|Person=1|Person[obj]=3|Tense=Pres"],["3","wawirrijarra","wawirri","NOUN","NOUN","1","2","obj","obj","kangaroo-DU(ABS)","Case=Abs|Number=Dual"],["4","ngajulurlu","ngajulu","PRON","PRON","1","2","nsubj","nsubj","1SG-ERG","Case=Erg|Number=Sing|Person=1|PronType=Prs"],["5",".",".","PUNCT","PUNCT","1","2","punct","punct",".","_"]]},"3.40d":{"comments":["# sent_id = 3.40d","# text = Pirli kalujana yurutuwana yirrarni.","# gloss = stone(ABS) PRES-they-them road-PERLATIVE put-NONPAST","# text_en = They are putting stones along the road.","# Perlative adjunct"],"rows":[["1","Pirli","pirli","NOUN","NOUN","4","4","obj","obj","stone(ABS)","Case=Abs"],["2","kalujana","ka","AUX","VERB","1","4","aux","nsubj","PRES-they-them","Number=Plur|Number[obj]=Plur|Person=3|Person[obj]=3|Tense=Pres"],["3","yurutuwana","yurutu","NOUN","NOUN","4","4","obl","obl","road-PERLATIVE","Case=Per"],["4","yirrarni","yirra","VERB","VERB","0","0","root","root","put-NONPAST","Tense=Pres"],["5",".",".","PUNCT","PUNCT","4","4","punct","punct",".","_"]]},"3.48":{"comments":["# sent_id = 3.48","# text = Ngaju karnangku nyuntuku wangkami.","# gloss = I(ABS) PRES-1SG(SUBJ)-2SG(OBJ) you-DAT talk-NONPAST","# text_en = I am talking to you."],"rows":[["1","Ngaju","ngaju","PRON","PRON","4","2","nsubj","nsubj","I(ABS)","Case=Abs|Number=Sing|Person=1|PronType=Prs"],["2","karnangku","ka","AUX","VERB","4","0","aux","root","PRES-1SG(SUBJ)-2SG(OBJ)","Number=Sing|Number[obj]=Sing|Person=1|Person[obj]=2|Tense=Pres"],["3","nyuntuku","nyuntu","PRON","PRON","4","4","obj","iobj","you-DAT","Case=Dat|Number=Sing|Person=2|PronType=Prs"],["4","wangkami","wangka","VERB","VERB","0","2","root","xcomp","talk-NONPAST","Tense=Pres"],["5",".",".","PUNCT","PUNCT","4","2","punct","punct",".","_"]]},"3.49":{"comments":["# sent_id = 3.49","# text = Ngaju karna nyuntukurra parnkami.","# gloss = I(ABS) PRES-1SG(SUBJ) you-ALL run-NONPAST","# text_en = I am running toward you."],"rows":[["1","Ngaju","ngaju","PRON","PRON","4","2","nsubj","nsubj","I(ABS)","Case=Abs|Number=Sing|Person=1|PronType=Prs"],["2","karna","ka","AUX","VERB","4","0","aux","root","PRES-1SG(SUBJ)","Number=Sing|Person=1|Tense=Pres"],["3","nyuntukurra","nyuntu","PRON","PRON","4","4","obl","iobj","you-ALL","Case=All|Number=Sing|Person=2|PronType=Prs"],["4","parnkami","parnka","VERB","VERB","0","2","root","dep","run-NONPAST","Tense=Pres"],["5",".",".","PUNCT","PUNCT","4","4","punct","punct",".","_"]]},"3.45":{"comments":["# sent_id = 3.45","# text = Japanangkarlu kaju karli yinyi miyiwanawana.","# gloss = Japanangka-ERG PRES-1SG(OBJ) boomerang(ABS) give-NONPAST food-CONS","# text_en = Japanangka is giving me a boomerang in exchange for food.","# Andrews: The 'considerative' (CONS) is applied to an NP denoting something that is given in exchange for something else."],"rows":[["1","Japanangkarlu","Japanangka","PROPN","PROPN","4","4","nsubj","nsubj","Japanangka-ERG","Case=Erg"],["2","kaju","ka","AUX","PRON","4","4","aux","obj","PRES-1SG(OBJ)","Number[obj]=Sing|Person[obj]=1|Tense=Pres"],["3","karli","karli","NOUN","NOUN","4","4","obj","obj","boomerang(ABS)","Case=Abs"],["4","yinyi","yi","VERB","VERB","0","0","root","root","give-NONPAST","Tense=Pres"],["5","miyiwanawana","miyi","NOUN","NOUN","4","4","obl","obl","food-CONS","Case=Cns"],["6",".",".","PUNCT","PUNCT","4","4","punct","punct",".","_"]]},"3.55d":{"comments":["# sent_id = 3.55d","# text = Karlirna nyangu pirlingirli wantinjakurra.","# gloss = boomerang(ABS)-1SG(SUBJ) see-PAST stone-ELATIVE fall-INF-while","# text_en = I saw the boomerang fall from the stone."],"rows":[["1-2","Karlirna","_","_","_","_","_","_","_","","_"],["1","Karli","karli","NOUN","NOUN","3","3","obj","obj","boomerang(ABS)","Case=Abs"],["2","rna","ka","AUX","PRON","3","3","aux","nsubj","1SG(SUBJ)","Clitic=Yes|Number=Sing|Person=1"],["3","nyangu","nya","VERB","VERB","0","0","root","root","see-PAST","Tense=Past"],["4","pirlingirli","pirli","NOUN","NOUN","5","5","obl","nmod","stone-ELATIVE","Case=Ela"],["5","wantinjakurra","wanti","VERB","VERB","3","3","advcl","xcomp","fall-INF-while","VerbForm=Inf"],["6",".",".","PUNCT","PUNCT","3","3","punct","punct",".","_"]]},"3.55a":{"comments":["# sent_id = 3.55a","# text = Ngajulurlurna yankirri panturnu, ngapa ngarninjakurra.","# gloss = I-ERG-1SG(SUBJ) emu(ABS) spear-PAST water(ABS) drink-INF-while","# text_en = I speared the emu while it (not I) was drinking water."],"rows":[["1-2","Ngajulurlurna","_","_","_","_","_","_","_","","_"],["1","Ngajulurlurna","ngajulu","PRON","PRON","4","4","nsubj","nsubj","I-ERG-1SG(SUBJ)","Case=Erg|Number=Sing|Person=1|PronType=Prs"],["2","rna","ka","AUX","PART","4","1","aux","fixed","1SG(SUBJ)","Clitic=Yes|Number=Sing|Person=1"],["3","yankirri","yankirri","NOUN","NOUN","4","4","obj","obj","emu(ABS)","Case=Abs"],["4","panturnu","pantu","VERB","VERB","0","0","root","root","spear-PAST","Tense=Past"],["5",",",",","PUNCT","PUNCT","4","4","punct","punct",",","_"],["6","ngapa","ngapa","NOUN","NOUN","7","7","obj","obj","water(ABS)","Case=Abs"],["7","ngarninjakurra","nga","VERB","VERB","4","4","advcl","advcl","drink-INF-while","VerbForm=Inf"],["8",".",".","PUNCT","PUNCT","4","4","punct","punct",".","_"]]},"3.41":{"comments":["# sent_id = 3.41","# text = Maliki ka ngunami yuwarlijarrarla kulkurrujarra.","# gloss = dog(ABS) PRES lie-NONPAST house-DU-LOC between-DU","# text_en = The dog is lying between the two houses."],"rows":[["1","Maliki","maliki","NOUN","NOUN","3","3","nsubj","nsubj","dog(ABS)","Case=Abs"],["2","ka","ka","AUX","AUX","3","3","aux","aux","PRES","Tense=Pres"],["3","ngunami","nguna","VERB","VERB","0","0","root","root","lie-NONPAST","Tense=Pres"],["4","yuwarlijarrarla","yuwarli","NOUN","NOUN","3","5","obl","obj","house-DU-LOC","Case=Loc|Number=Dual"],["5","kulkurrujarra","kulkurru","ADP","NOUN","4","3","case","advmod","between-DU","Number=Dual"],["6",".",".","PUNCT","PUNCT","3","3","punct","punct",".","_"]]},"3.55cb":{"comments":["# sent_id = 3.55cb","# text = Ngaju karnangku marrijarrimi nyuntuku murrumurru ngunanjakurraku.","# gloss = I(ABS) PRES-1SG(SUBJ)-2SG(OBJ) grief-being-NONPAST you-DAT sick lie-INF-while-DAT","# text_en = I feel sorry for you while you are lying sick."],"rows":[["1","Ngaju","ngaju","PRON","PRON","3","2","nsubj","nsubj","I(ABS)","Case=Abs|Number=Sing|Person=1|PronType=Prs"],["2","karnangku","ka","AUX","VERB","3","0","aux","root","PRES-1SG(SUBJ)-2SG(OBJ)","Number=Sing|Number[obj]=Sing|Person=1|Person[obj]=2|Tense=Pres"],["3","marrijarrimi","marrijarri","VERB","NOUN","0","2","root","obj","grief-being-NONPAST","Tense=Pres"],["4","nyuntuku","nyuntu","PRON","PRON","3","3","obj","iobj","you-DAT","Case=Dat|Number=Sing|Person=2|PronType=Prs"],["5","murrumurru","murrumurru","ADJ","ADJ","6","6","advmod","amod","sick","_"],["6","ngunanjakurraku","nguna","VERB","VERB","3","2","advcl","advcl","lie-INF-while-DAT","Case=Dat|VerbForm=Inf"],["7",".",".","PUNCT","PUNCT","3","2","punct","punct",".","_"]]}};
+const TREEBANK = "Warlpiri-UFAL";
+const labels = Object.keys(M).sort();
+const tbl = document.getElementById('tbl');
+
+let maxV = 1;
+for (const g of labels)
+  for (const p of labels)
+    if (g !== p && M[g] && M[g][p]) maxV = Math.max(maxV, M[g][p]);
+
+const hrow = tbl.insertRow();
+const corner = document.createElement('th');
+corner.className = 'rh';
+corner.textContent = 'gold \ pred';
+hrow.appendChild(corner);
+for (const p of labels) {
+  const th = document.createElement('th');
+  th.className = 'col-label';
+  th.textContent = p;
+  hrow.appendChild(th);
+}
+
+let sel = null;
+for (const g of labels) {
+  const row = tbl.insertRow();
+  const rh = document.createElement('th');
+  rh.className = 'rh';
+  rh.textContent = g;
+  row.appendChild(rh);
+  for (const p of labels) {
+    const td = row.insertCell();
+    const cnt = (M[g] && M[g][p]) || 0;
+    td.textContent = cnt || '';
+    if (g === p) {
+      td.className = 'diag';
+      td.title = cnt + ' correct';
+    } else if (cnt > 0) {
+      const t = cnt / maxV;
+      const ch = Math.round(255 * (1 - t * 0.8));
+      td.style.background = 'rgb(255,' + ch + ',' + ch + ')';
+      td.id = g + '--' + p;
+      td.className = 'click';
+      td.title = 'gold:' + g + ' → pred:' + p + ': ' + cnt;
+      td.addEventListener('click', (function(gl, pl, c, cell) {
+        return function() { show(gl, pl, c, cell); };
+      })(g, p, cnt, td));
+    }
+  }
+}
+
+function show(gL, pL, cnt, cell) {
+  history.replaceState(null, '', '#' + gL + '--' + pL);
+  if (sel) sel.classList.remove('sel');
+  cell.classList.add('sel');
+  sel = cell;
+  document.getElementById('sel-hdr').textContent =
+    'gold: ' + gL + '  →  pred: ' + pL + '  (' + cnt + ' sentence' + (cnt !== 1 ? 's' : '') + ')';
+  document.getElementById('sentences-section').scrollIntoView({ behavior: 'smooth' });
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  const corpus = (TREEBANK.startsWith('UD_') ? TREEBANK : 'UD_' + TREEBANK) + '@2.18';
+  const sents = S[gL + '→' + pL] || [];
+  for (const [sid, tids] of sents) {
+    const sent = SENTS[sid] || {};
+    const grewUrl = 'https://universal.grew.fr/?corpus=' + corpus +
+      '&request=' + encodeURIComponent('pattern { meta.sent_id = "' + sid + '" }');
+    const d = document.createElement('div');
+    d.className = 'pair';
+    d.innerHTML =
+      '<div class="pair-id"><a href="' + grewUrl + '" target="_blank">' + esc(sid) + '</a></div>' +
+      '<div style="overflow-x:auto">' + renderTable(sent.comments, sent.rows, tids) + '</div>';
+    list.appendChild(d);
+  }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+const HDRS = ["ID", "FORM", "LEMMA", "UPOS", "UPOS·p", "HEAD", "HEAD·p", "DEPREL", "DEPREL·p", "MGloss/Gloss", "FEATS"];
+const PRED_COLS = new Set([4, 6, 8]);
+const PRED_GOLD = new Map([[4, 3], [6, 5], [8, 7]]);
+
+function renderTable(comments, rows, tokenIds) {
+  const ids = new Set(tokenIds || []);
+  let h = '';
+  if (comments && comments.length)
+    h += '<div class="sent-comments">' + comments.map(esc).join('<br>') + '</div>';
+  h += '<table class="sent-tbl"><thead><tr>';
+  HDRS.forEach((hdr, i) => {
+    h += '<th' + (PRED_COLS.has(i) ? ' class="pred-col"' : '') + '>' + esc(hdr) + '</th>';
+  });
+  h += '</tr></thead><tbody>';
+  for (const row of rows) {
+    const hl = ids.has(row[0]);
+    h += '<tr' + (hl ? ' class="hl-line"' : '') + '>';
+    row.forEach((cell, i) => {
+      const goldIdx = PRED_GOLD.get(i);
+      const mismatch = goldIdx !== undefined && cell !== row[goldIdx];
+      const cls = (PRED_COLS.has(i) ? 'pred-col' : '') + (mismatch ? ' mismatch' : '');
+      h += '<td' + (cls.trim() ? ' class="' + cls.trim() + '"' : '') + '>' + esc(cell) + '</td>';
+    });
+    h += '</tr>';
+  }
+  h += '</tbody></table>';
+  return h;
+}
+
+if (location.hash) {
+  const cell = document.getElementById(location.hash.slice(1));
+  if (cell) { cell.click(); cell.scrollIntoView({ behavior: 'instant', block: 'center' }); }
+}
+</script>
+</body>
+</html>
