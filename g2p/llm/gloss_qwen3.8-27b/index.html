@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Gloss2Parse evaluation</title>
+<style>
+* { box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; margin: 0; }
+#hdr { padding: 8px 16px; background: #2c3e50; color: #fff; }
+#hdr h1 { margin: 0; font-size: 1.1em; }
+table { border-collapse: collapse; font-size: 0.9em; margin: 16px; }
+th { background: #ecf0f1; padding: 6px 12px; border: 1px solid #bbb; text-align: left; cursor: pointer; user-select: none; white-space: nowrap; }
+th:hover { background: #dde4e6; }
+th::after { content: '\2003'; opacity: 0.35; }
+th[data-sort="asc"]::after { content: ' \25B2'; opacity: 1; }
+th[data-sort="desc"]::after { content: ' \25BC'; opacity: 1; }
+td { padding: 5px 12px; border: 1px solid #ddd; }
+tr:hover td { background: #f5f5f5; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+tfoot td { font-weight: bold; border-top: 2px solid #bbb; background: #f0f4f6; }
+a { color: #2980b9; text-decoration: none; }
+a:hover { text-decoration: underline; }
+#hdr { display: flex; align-items: baseline; gap: 16px; }
+#hdr a { color: #cfe3f2; font-size: 0.85em; }
+</style>
+</head>
+<body>
+<div id="hdr"><h1>Gloss2Parse evaluation</h1><a href="../../index.html">&larr; Overview</a></div>
+<table><thead><tr><th title="Parsed corpus filename">pred_name</th><th title="UD treebank name">treebank</th><th title="Parsed sentences / total (from gold data)">sents</th><th title="Parsed tokens">tokens</th><th title="Universal POS label accuracy">UPOS</th><th title="Unlabeled attachment score">UAS</th><th title="Labeled attachment score">LAS</th><th title="Content LAS (excluding aux/case/cc/clf/conj/cop/det/mark/punct)">CLAS</th><th title="Core argument LAS (only ccomp/csubj/iobj/nsubj/obj/root/xcomp)">CoreLAS</th><th title="Dependency relation label accuracy (base type; subtypes collapsed)">deprel</th></tr></thead><tbody><tr><td>19_ae</td><td>Avestan-Old</td><td class="num">24/24</td><td class="num">317</td><td class="num"><a href="upos/19_ae.html">86.8%</a></td><td class="num">41.6%</td><td class="num">20.5%</td><td class="num">22.2%</td><td class="num">33.0%</td><td class="num"><a href="deprel/19_ae.html">38.2%</a></td></tr><tr><td>19_bgs</td><td>Tagabawa-GJA</td><td class="num">124/125</td><td class="num">869</td><td class="num"><a href="upos/19_bgs.html">78.0%</a></td><td class="num">74.1%</td><td class="num">48.6%</td><td class="num">47.0%</td><td class="num">54.5%</td><td class="num"><a href="deprel/19_bgs.html">59.5%</a></td></tr><tr><td>19_ce</td><td>Chechen-MottDT</td><td class="num">476/489</td><td class="num">3065</td><td class="num"><a href="upos/19_ce.html">86.9%</a></td><td class="num">56.1%</td><td class="num">44.6%</td><td class="num">45.2%</td><td class="num">53.6%</td><td class="num"><a href="deprel/19_ce.html">63.7%</a></td></tr><tr><td>19_dar</td><td>Dargwa-Mehweb</td><td class="num">912/961</td><td class="num">4329</td><td class="num"><a href="upos/19_dar.html">88.8%</a></td><td class="num">65.5%</td><td class="num">52.4%</td><td class="num">49.2%</td><td class="num">57.0%</td><td class="num"><a href="deprel/19_dar.html">66.0%</a></td></tr><tr><td>19_drs</td><td>Gedeo-GDT</td><td class="num">47/47</td><td class="num">269</td><td class="num"><a href="upos/19_drs.html">80.3%</a></td><td class="num">39.0%</td><td class="num">17.5%</td><td class="num">15.6%</td><td class="num">21.9%</td><td class="num"><a href="deprel/19_drs.html">27.5%</a></td></tr><tr><td>19_eve</td><td>Even-GDUD</td><td class="num">38/39</td><td class="num">277</td><td class="num"><a href="upos/19_eve.html">80.9%</a></td><td class="num">43.7%</td><td class="num">33.9%</td><td class="num">33.2%</td><td class="num">39.0%</td><td class="num"><a href="deprel/19_eve.html">58.1%</a></td></tr><tr><td>19_evn</td><td>Evenki-GDUD</td><td class="num">39/39</td><td class="num">249</td><td class="num"><a href="upos/19_evn.html">85.5%</a></td><td class="num">57.4%</td><td class="num">47.8%</td><td class="num">44.8%</td><td class="num">56.8%</td><td class="num"><a href="deprel/19_evn.html">69.5%</a></td></tr><tr><td>19_gu</td><td>Gujarati-ShabdaSetu</td><td class="num">37/38</td><td class="num">365</td><td class="num"><a href="upos/19_gu.html">82.7%</a></td><td class="num">51.0%</td><td class="num">38.4%</td><td class="num">38.9%</td><td class="num">50.0%</td><td class="num"><a href="deprel/19_gu.html">61.9%</a></td></tr><tr><td>19_hac</td><td>Gorani-Hawrami</td><td class="num">61/61</td><td class="num">520</td><td class="num"><a href="upos/19_hac.html">86.0%</a></td><td class="num">49.2%</td><td class="num">31.2%</td><td class="num">25.5%</td><td class="num">56.5%</td><td class="num"><a href="deprel/19_hac.html">47.3%</a></td></tr><tr><td>19_mnc</td><td>Manchu-GDUD</td><td class="num">19/81</td><td class="num">117</td><td class="num"><a href="upos/19_mnc.html">70.9%</a></td><td class="num">41.0%</td><td class="num">26.5%</td><td class="num">28.3%</td><td class="num">40.9%</td><td class="num"><a href="deprel/19_mnc.html">41.9%</a></td></tr><tr><td>19_neg</td><td>Negidal-GDUD</td><td class="num">13/62</td><td class="num">62</td><td class="num"><a href="upos/19_neg.html">90.3%</a></td><td class="num">56.5%</td><td class="num">48.4%</td><td class="num">46.0%</td><td class="num">53.8%</td><td class="num"><a href="deprel/19_neg.html">62.9%</a></td></tr><tr><td>19_oac</td><td>Oroch-GDUD</td><td class="num">21/110</td><td class="num">68</td><td class="num"><a href="upos/19_oac.html">97.1%</a></td><td class="num">92.6%</td><td class="num">86.8%</td><td class="num">85.2%</td><td class="num">90.2%</td><td class="num"><a href="deprel/19_oac.html">89.7%</a></td></tr><tr><td>19_pa</td><td>Punjabi-DYZ</td><td class="num">236/243</td><td class="num">4436</td><td class="num"><a href="upos/19_pa.html">78.8%</a></td><td class="num">46.3%</td><td class="num">34.9%</td><td class="num">29.8%</td><td class="num">39.1%</td><td class="num"><a href="deprel/19_pa.html">56.4%</a></td></tr><tr><td>19_th</td><td>Thai-TDT</td><td class="num">71/239</td><td class="num">1603</td><td class="num"><a href="upos/19_th.html">71.4%</a></td><td class="num">51.8%</td><td class="num">27.9%</td><td class="num">26.0%</td><td class="num">45.5%</td><td class="num"><a href="deprel/19_th.html">38.6%</a></td></tr><tr><td>19_ude</td><td>Udihe-GDUD</td><td class="num">93/94</td><td class="num">498</td><td class="num"><a href="upos/19_ude.html">81.5%</a></td><td class="num">66.5%</td><td class="num">51.6%</td><td class="num">50.1%</td><td class="num">65.3%</td><td class="num"><a href="deprel/19_ude.html">63.1%</a></td></tr><tr><td>19_ulc</td><td>Ulch-GDUD</td><td class="num">38/93</td><td class="num">43</td><td class="num"><a href="upos/19_ulc.html">95.3%</a></td><td class="num">100.0%</td><td class="num">97.7%</td><td class="num">97.7%</td><td class="num">100.0%</td><td class="num"><a href="deprel/19_ulc.html">97.7%</a></td></tr><tr><td>ceb</td><td>Cebuano-GJA</td><td class="num">198/198</td><td class="num">1394</td><td class="num"><a href="upos/ceb.html">78.8%</a></td><td class="num">74.8%</td><td class="num">55.0%</td><td class="num">57.0%</td><td class="num">67.2%</td><td class="num"><a href="deprel/ceb.html">62.3%</a></td></tr><tr><td>ess-dev</td><td>Yupik-SLI-dev</td><td class="num">306/309</td><td class="num">1469</td><td class="num"><a href="upos/ess-dev.html">81.2%</a></td><td class="num">56.4%</td><td class="num">43.5%</td><td class="num">42.2%</td><td class="num">52.8%</td><td class="num"><a href="deprel/ess-dev.html">59.0%</a></td></tr><tr><td>gor</td><td>Gorontalo-BungoLoLombi</td><td class="num">37/39</td><td class="num">195</td><td class="num"><a href="upos/gor.html">77.9%</a></td><td class="num">62.6%</td><td class="num">45.1%</td><td class="num">47.0%</td><td class="num">43.4%</td><td class="num"><a href="deprel/gor.html">48.2%</a></td></tr><tr><td>gwi</td><td>Gwichin-TueCL</td><td class="num">307/313</td><td class="num">990</td><td class="num"><a href="upos/gwi.html">92.4%</a></td><td class="num">84.2%</td><td class="num">76.2%</td><td class="num">70.1%</td><td class="num">86.3%</td><td class="num"><a href="deprel/gwi.html">81.0%</a></td></tr><tr><td>lzh</td><td>Classical_Chinese-TueCL</td><td class="num">92/100</td><td class="num">600</td><td class="num"><a href="upos/lzh.html">73.7%</a></td><td class="num">49.2%</td><td class="num">33.0%</td><td class="num">34.7%</td><td class="num">42.4%</td><td class="num"><a href="deprel/lzh.html">43.2%</a></td></tr><tr><td>nhi</td><td>Western_Sierra_Puebla_Nahuatl-MesoTree</td><td class="num">141/3024</td><td class="num">1035</td><td class="num"><a href="upos/nhi.html">84.1%</a></td><td class="num">66.8%</td><td class="num">54.8%</td><td class="num">49.1%</td><td class="num">61.5%</td><td class="num"><a href="deprel/nhi.html">68.8%</a></td></tr><tr><td>ruc</td><td>Ruuli-RDT</td><td class="num">1008/1234</td><td class="num">5238</td><td class="num"><a href="upos/ruc.html">80.3%</a></td><td class="num">64.1%</td><td class="num">49.9%</td><td class="num">48.1%</td><td class="num">62.0%</td><td class="num"><a href="deprel/ruc.html">63.1%</a></td></tr><tr><td>tl</td><td>Tagalog-TRG</td><td class="num">128/128</td><td class="num">734</td><td class="num"><a href="upos/tl.html">79.6%</a></td><td class="num">87.7%</td><td class="num">63.8%</td><td class="num">69.0%</td><td class="num">69.1%</td><td class="num"><a href="deprel/tl.html">68.1%</a></td></tr><tr><td>wbp</td><td>Warlpiri-UFAL</td><td class="num">54/55</td><td class="num">309</td><td class="num"><a href="upos/wbp.html">90.9%</a></td><td class="num">81.9%</td><td class="num">72.5%</td><td class="num">72.9%</td><td class="num">75.1%</td><td class="num"><a href="deprel/wbp.html">80.3%</a></td></tr><tr><td>yrk</td><td>Nenets-Tundra</td><td class="num">170/170</td><td class="num">1272</td><td class="num"><a href="upos/yrk.html">79.6%</a></td><td class="num">55.0%</td><td class="num">38.0%</td><td class="num">34.0%</td><td class="num">62.9%</td><td class="num"><a href="deprel/yrk.html">51.8%</a></td></tr></tbody><tfoot><tr><td>macro avg</td><td></td><td></td><td class="num"></td><td class="num">83.1%</td><td class="num">62.1%</td><td class="num">47.7%</td><td class="num">46.5%</td><td class="num">56.9%</td><td class="num">60.3%</td></tr><tr><td>micro avg</td><td></td><td></td><td class="num">30323</td><td class="num">82.1%</td><td class="num">60.4%</td><td class="num">45.8%</td><td class="num">43.4%</td><td class="num">56.8%</td><td class="num">60.2%</td></tr></tfoot></table>
+<script>
+(function () {
+  const table = document.querySelector('table');
+  if (!table) return;
+  const tbody = table.tBodies[0];
+  const headers = Array.from(table.tHead.rows[0].cells);
+  let sortCol = -1, sortDir = 1;
+  headers.forEach((th, idx) => {
+    th.addEventListener('click', () => {
+      sortDir = (sortCol === idx) ? -sortDir : 1;
+      sortCol = idx;
+      const rows = Array.from(tbody.rows);
+      rows.sort((a, b) => {
+        const at = a.cells[idx].textContent.trim();
+        const bt = b.cells[idx].textContent.trim();
+        const an = parseFloat(at), bn = parseFloat(bt);
+        const numeric = !isNaN(an) && !isNaN(bn);
+        const cmp = numeric ? an - bn : at.localeCompare(bt);
+        return cmp * sortDir;
+      });
+      rows.forEach(r => tbody.appendChild(r));
+      headers.forEach(h => h.removeAttribute('data-sort'));
+      th.setAttribute('data-sort', sortDir > 0 ? 'asc' : 'desc');
+    });
+  });
+})();
+</script>
+</body>
+</html>
