@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>deprel &mdash; Manchu-GDUD</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+Tangut&display=swap">
+<style>
+* { box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
+#hdr { padding: 8px 16px; background: #2c3e50; color: #fff; flex-shrink: 0; position: relative; }
+#hdr h1 { margin: 0; font-size: 1.1em; }
+#hdr a.back { position: absolute; top: 8px; right: 16px; color: #cfe3f2; font-size: 0.85em; text-decoration: none; }
+#hdr a.back:hover { text-decoration: underline; }
+#stats { margin: 2px 0 0; font-size: 0.8em; opacity: 0.8; }
+#matrix-section { padding: 12px 16px; overflow-x: auto; }
+#sentences-section { padding: 12px 16px; border-top: 2px solid #bbb; }
+#sel-hdr { font-weight: bold; margin-bottom: 10px; color: #2c3e50; min-height: 1.4em; }
+#placeholder { color: #aaa; font-style: italic; padding: 40px; text-align: center; }
+table { border-collapse: collapse; font-size: 0.75em; }
+th { background: #ecf0f1; position: sticky; top: 0; z-index: 1; padding: 4px 6px; border: 1px solid #bbb; }
+th.rh { text-align: left; position: sticky; left: 0; z-index: 2; }
+th.col-label { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; vertical-align: bottom; height: 120px; padding: 4px 2px; text-align: left; }
+td { padding: 3px 8px; border: 1px solid #ddd; text-align: right; min-width: 36px; font-variant-numeric: tabular-nums; }
+td.diag { background: #f0f0f0; color: #999; }
+td.click { cursor: pointer; }
+td.click:hover { filter: brightness(0.88); }
+td.sel { outline: 2px solid #2980b9; outline-offset: -2px; }
+.pair { margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
+.pair-id { background: #f8f8f8; padding: 3px 10px; font-size: 0.82em; color: #555; border-bottom: 1px solid #ddd; font-family: monospace; }
+.pair-id a { color: #2980b9; text-decoration: underline; font-size: 1.1em; }
+.pair-id a:hover { color: #1a5276; }
+.sent-comments { font-family: monospace, "Noto Serif Tangut"; font-size: 0.73em; color: #555; padding: 3px 8px; border-bottom: 1px solid #eee; }
+.sent-tbl { width: 100%; border-collapse: collapse; font-size: 0.72em; font-family: monospace, "Noto Serif Tangut"; }
+.sent-tbl th, .sent-tbl td { padding: 2px 6px; border: 1px solid #ddd; text-align: left; white-space: nowrap; }
+.sent-tbl th { background: #ecf0f1; font-family: system-ui, sans-serif; }
+.sent-tbl th.pred-col, .sent-tbl td.pred-col { background: #eaf4fb; }
+.sent-tbl th:nth-child(4), .sent-tbl td:nth-child(4),
+.sent-tbl th:nth-child(10), .sent-tbl td:nth-child(10),
+.sent-tbl th:nth-child(13), .sent-tbl td:nth-child(13) { border-left: 2px solid #aaa; }
+.sent-tbl th:nth-child(6), .sent-tbl td:nth-child(6),
+.sent-tbl th:nth-child(8), .sent-tbl td:nth-child(8) { border-left: 1.5px solid #aaa; }
+tr.hl-line td { background: #fffbcc !important; }
+tr.hl-line td.pred-col { background: #fff5a0 !important; }
+.sent-tbl td.mismatch { background: #fde8e8; }
+</style>
+</head>
+<body>
+<div id="hdr">
+  <a class="back" href="../index.html">&larr; Index</a>
+  <h1>Manchu-GDUD</h1>
+  <div id="stats">19 sents &middot; 117 tokens &middot; UPOS 57.3% &middot; UAS 33.3% &middot; LAS 18.8% &middot; CLAS 19.8% &middot; CORELAS 27.3% &middot; DEPREL 33.3%</div>
+</div>
+<div id="matrix-section"><table id="tbl"></table></div>
+<div id="sentences-section">
+  <div id="sel-hdr"></div>
+  <div id="list"><div id="placeholder">Click a confusion cell to see examples</div></div>
+</div>
+<script>
+const M = {"acl":{"det":1},"advcl":{"acl":1,"advcl":2,"advmod":1,"compound":1,"punct":1,"root":4},"advmod":{"advmod":4,"mark":1,"obl":2,"punct":2,"root":2},"amod":{"amod":1},"appos":{},"aux":{},"case":{"case":1},"cc":{},"ccomp":{"ccomp":2},"compound":{"case":1,"nmod":2,"punct":1},"conj":{"advmod":1,"obj":1,"root":1},"cop":{"det":1},"det":{"amod":3,"det":3},"iobj":{"obj":1},"mark":{},"nmod":{"amod":1,"nmod":1,"obl":2,"punct":2},"nsubj":{"appos":1,"det":1,"nsubj":9,"obj":3,"obl":1,"punct":1},"nummod":{"amod":1,"nummod":2},"obj":{"compound":1,"det":1,"nsubj":1,"obj":2,"obl":1},"obl":{"case":1,"ccomp":1,"det":2,"nmod":2,"nsubj":2,"obj":1,"obl":5},"parataxis":{"advcl":1,"advmod":1,"aux":1,"cc":1,"conj":1,"obj":2,"obl":1,"parataxis":1,"punct":1,"root":1,"xcomp":1},"punct":{},"root":{"acl":1,"advcl":1,"aux":1,"conj":1,"nsubj":2,"obj":1,"punct":6,"root":6},"xcomp":{}};
+const S = {"obl→nsubj":[["Manchu_grammar_63",["1"]],["Manchu_grammar_76",["9"]]],"obl→ccomp":[["Manchu_grammar_70",["5"]]],"obl→nmod":[["Manchu_grammar_75",["1"]],["Manchu_grammar_78",["3"]]],"obl→case":[["Manchu_grammar_75",["2"]]],"obl→det":[["Manchu_grammar_75",["3"]],["Manchu_grammar_77",["6"]]],"obl→obj":[["Manchu_grammar_77",["1"]]],"det→amod":[["Manchu_grammar_63",["2"]],["Manchu_grammar_66",["4"]],["Manchu_grammar_74",["4"]]],"nsubj→obj":[["Manchu_grammar_63",["3"]],["Manchu_grammar_64",["3"]],["Manchu_grammar_66",["5"]]],"nsubj→appos":[["Manchu_grammar_73",["2"]]],"nsubj→punct":[["Manchu_grammar_74",["7"]]],"nsubj→det":[["Manchu_grammar_76",["1"]]],"nsubj→obl":[["Manchu_grammar_76",["7"]]],"root→punct":[["Manchu_grammar_63",["4"]],["Manchu_grammar_64",["4"]],["Manchu_grammar_66",["6"]],["Manchu_grammar_67",["4"]],["Manchu_grammar_68",["1"]]],"root→aux":[["Manchu_grammar_71",["2"]]],"root→acl":[["Manchu_grammar_73",["4"]]],"root→conj":[["Manchu_grammar_74",["8"]]],"root→advcl":[["Manchu_grammar_77",["2"]]],"root→obj":[["Manchu_grammar_79",["6"]]],"root→nsubj":[["Manchu_grammar_81",["8"]],["Manchu_grammar_82",["7"]]],"advmod→obl":[["Manchu_grammar_66",["1"]],["Manchu_grammar_75",["6"]]],"advmod→punct":[["Manchu_grammar_70",["8"]],["Manchu_grammar_73",["9"]]],"advmod→root":[["Manchu_grammar_73",["5"]],["Manchu_grammar_79",["8"]]],"advmod→mark":[["Manchu_grammar_82",["3"]]],"parataxis→root":[["Manchu_grammar_68",["2"]]],"parataxis→obl":[["Manchu_grammar_68",["3"]]],"parataxis→advmod":[["Manchu_grammar_68",["4"]]],"parataxis→obj":[["Manchu_grammar_69",["2"]],["Manchu_grammar_72",["3"]]],"parataxis→advcl":[["Manchu_grammar_69",["3"]]],"parataxis→aux":[["Manchu_grammar_70",["6"]]],"parataxis→xcomp":[["Manchu_grammar_72",["4"]]],"parataxis→punct":[["Manchu_grammar_72",["5"]]],"parataxis→conj":[["Manchu_grammar_74",["3"]]],"parataxis→cc":[["Manchu_grammar_74",["6"]]],"advcl→root":[["Manchu_grammar_71",["1"]],["Manchu_grammar_74",["1"]],["Manchu_grammar_80",["2"]],["Manchu_grammar_82",["6"]]],"advcl→compound":[["Manchu_grammar_77",["4"]]],"advcl→advmod":[["Manchu_grammar_78",["4"]]],"advcl→acl":[["Manchu_grammar_79",["4"]]],"advcl→punct":[["Manchu_grammar_79",["9"]]],"iobj→obj":[["Manchu_grammar_73",["7"]]],"compound→nmod":[["Manchu_grammar_73",["8"]],["Manchu_grammar_81",["3"]]],"compound→case":[["Manchu_grammar_81",["4"]]],"compound→punct":[["Manchu_grammar_82",["4"]]],"obj→nsubj":[["Manchu_grammar_74",["2"]]],"obj→det":[["Manchu_grammar_75",["8"]]],"obj→compound":[["Manchu_grammar_77",["3"]]],"obj→obl":[["Manchu_grammar_78",["6"]]],"nmod→obl":[["Manchu_grammar_74",["5"]],["Manchu_grammar_81",["2"]]],"nmod→punct":[["Manchu_grammar_79",["3"]],["Manchu_grammar_82",["5"]]],"nmod→amod":[["Manchu_grammar_81",["5"]]],"nummod→amod":[["Manchu_grammar_76",["6"]]],"cop→det":[["Manchu_grammar_76",["8"]]],"conj→root":[["Manchu_grammar_77",["5"]]],"conj→obj":[["Manchu_grammar_77",["7"]]],"conj→advmod":[["Manchu_grammar_79",["7"]]],"acl→det":[["Manchu_grammar_81",["7"]]]};
+const SENTS = {"Manchu_grammar_63":{"comments":["# sent_id = Manchu_grammar_63","# text = sinde udu indahūn bio","# text[eng] = How many dogs do you have?"],"rows":[["1","sinde","si","PRON","PRON","4","0","obl","nsubj","you","sinde","","Case=Dat|Number=Sing|Person=2|PronType=Prs"],["2","udu","udu","DET","ADJ","3","3","det","amod","many","many","how.many","PronType=Int"],["3","indahūn","indahūn","NOUN","NOUN","4","0","nsubj","obj","dogs","dog","dog","_"],["4","bio","bi","VERB","PUNCT","0","0","root","punct","?","exist","be.exist","Mood=Int"]]},"Manchu_grammar_76":{"comments":["# sent_id = Manchu_grammar_76","# text = sahûrun usiha abka-i jalu dekde-hebi Ila-ci ging o-me muke-i","# text[eng] = The stars float in the sky; during the third watch, the water is..."],"rows":[["1","sahûrun","sahûrun","NOUN","DET","4","2","nsubj","det","The","cold","cold","_"],["2","usiha","usiha","NOUN","NOUN","4","4","nsubj:outer","nsubj","stars","star","star","_"],["3","abka-i","abka","NOUN","NOUN","4","4","obl","obl","sky","sky","sky-'s","Case=Gen"],["4","jalu","jalu","VERB","VERB","0","0","root","root","float","float","float-ed","Aspect=Perf|Mood=Ind|VerbForm=Fin"],["5","dekde-hebi","dekde","VERB","AUX","4","4","parataxis","parataxis","is","has","has","Aspect=Perf|Mood=Ind|VerbForm=Fin"],["6","Ila-ci","ila","NUM","ADJ","9","7","nummod","amod","third","third","third.watch","_"],["7","ging","ging","NOUN","NOUN","9","5","nsubj","obl","watch","ing","be-ing","_"],["8","o-me","o","AUX","DET","9","7","cop","det","the","copula","copula","Tense=Pres"],["9","muke-i","muke","NOUN","NOUN","4","5","obl","nsubj","water","water","water-'s","Case=Gen"]]},"Manchu_grammar_70":{"comments":["# sent_id = Manchu_grammar_70","# text = K'an Ze hendu-me Weile-be elhese-ci ojorakû Te uthai","# text[eng] = K’an Ze said: \"Do not slacken your work now at once.\""],"rows":[["1","K'an","K'an","PROPN","PROPN","3","3","nsubj","nsubj","K","K'an","","_"],["2","Ze","Ze","PROPN","PROPN","3","3","nsubj:outer","nsubj","Ze","Ze","","_"],["3","hendu-me","hendu","VERB","VERB","0","0","root","root","said","say","say-ing","VerbForm=Conv"],["4","Weile-be","Weile","VERB","NOUN","6","5","obj","obj","work","work","work-Acc","Case=Acc"],["5","elhese-ci","elhese","NOUN","VERB","6","3","obl","ccomp","slacken","slacken","slacken-ing","Case=Abl"],["6","ojorakû","ojo","VERB","AUX","3","5","parataxis","aux","Do","do","won't.do","Polarity=Neg|VerbForm=Part"],["7","Te","te","ADV","ADV","8","5","advmod","advmod","now","now","now","_"],["8","uthai","uthai","ADV","PUNCT","6","5","advmod","punct","\"","at","at.once","_"]]},"Manchu_grammar_75":{"comments":["# sent_id = Manchu_grammar_75","# text = dalin-i baru muke eyen-i dahashûn juraka tere dobori","# text[eng] = (They) set out toward the current at the shore that night"],"rows":[["1","dalin-i","dalin","NOUN","NOUN","5","4","obl","nmod","shore","shore","shore-'s","Case=Gen"],["2","baru","baru","NOUN","ADP","5","4","obl","case","toward","toward","toward","_"],["3","muke","muke","NOUN","DET","5","1","obl","det","the","water","water","_"],["4","eyen-i","eyen","NOUN","NOUN","5","5","obl","obl","current","current","current-'s","Case=Gen"],["5","dahashûn","dahashûn","VERB","VERB","0","0","root","root","set","set","set.out","Aspect=Perf|Mood=Ind|VerbForm=Fin"],["6","juraka","juraka","ADV","NOUN","5","5","advmod","obl:unmarked","night","night","that.night","_"],["7","tere","tere","DET","DET","8","6","det","det","that","that","that","PronType=Dem"],["8","dobori","dobori","NOUN","DET","5","4","obj","det","the","fish","fish","_"]]},"Manchu_grammar_78":{"comments":["# sent_id = Manchu_grammar_78","# text = K'an_Ze hendu-me Cenghiyang-de hûdula-me alana Dergi","# text[eng] = K'an Ze said: \"Report quickly to Chancellor Cenghiyang!\""],"rows":[["1","K'an_Ze","K'an_Ze","PROPN","PROPN","2","2","nsubj","nsubj","K","K'an_Ze","","_"],["2","hendu-me","hendu","VERB","VERB","0","0","root","root","said","say","say-ing","VerbForm=Conv"],["3","Cenghiyang-de","Cenghiyang","PROPN","PROPN","5","6","obl","nmod:desc","Chancellor","chancellor","chancellor-to","Case=Dat"],["4","hûdula-me","hûdula","VERB","ADV","5","5","advcl","advmod","quickly","hurry","hurry-ing","VerbForm=Conv"],["5","alana","alana","VERB","VERB","2","2","ccomp","ccomp","Report","report","report","Mood=Ind|Tense=Pres|VerbForm=Fin"],["6","Dergi","Dergi","PROPN","PROPN","5","5","obj","obl","Cenghiyang","Dergi","","_"]]},"Manchu_grammar_77":{"comments":["# sent_id = Manchu_grammar_77","# text = ing-de isina-fi giyang-be bedere-re cooha-i niyalma-de jafa-bu-ha","# text[eng] = Having reached the camp, they captured and handed over the river-patrol men"],"rows":[["1","ing-de","ing","ADV","NOUN","2","2","obl","obj","camp","camp","camp-to","_"],["2","isina-fi","isina","VERB","VERB","0","5","root","advcl","reached","reach","reach-ing","Aspect=Perf|Mood=Ind|VerbForm=Fin"],["3","giyang-be","giyang","NOUN","NOUN","5","4","obj","compound","river","river","river-ACC","Case=Acc"],["4","bedere-re","bedere","VERB","NOUN","5","7","advcl","compound","patrol","patrol","patrol-ing","VerbForm=Conv"],["5","cooha-i","cooha","VERB","VERB","2","0","conj","root","captured","take","take-give-ed","Aspect=Perf|Mood=Ind|VerbForm=Fin"],["6","niyalma-de","niyalma","NOUN","DET","5","7","obl","det","the","army","army-'s","Case=Gen"],["7","jafa-bu-ha","jafa","VERB","NOUN","5","0","conj","obj","men","men","men-by","Aspect=Perf|Mood=Ind|VerbForm=Fin"]]},"Manchu_grammar_66":{"comments":["# sent_id = Manchu_grammar_66","# text = tuttu oci boode udu indahvn bio","# text[eng] = In that case, how many dogs do you have at home?"],"rows":[["1","tuttu","tuttu","ADV","NOUN","6","0","advmod","obl","case","case","in.that.case","_"],["2","oci","oci","ADP","ADP","1","1","case","case","In","oci","","Case=Loc"],["3","boode","boo","NOUN","NOUN","6","0","obl","obl","home","house","house","_"],["4","udu","udu","DET","ADJ","5","5","det","amod","many","many","how.many","PronType=Int"],["5","indahvn","indahvn","NOUN","NOUN","6","0","nsubj","obj","dogs","dog","dog","_"],["6","bio","bi","VERB","PUNCT","0","0","root","punct","?","exist","be.exist","Mood=Int"]]},"Manchu_grammar_74":{"comments":["# sent_id = Manchu_grammar_74","# text = buta-ra niyalma obu-fi ajige weihu-de te-fi emhun suru-me amargi","# text[eng] = (Someone) caught a man, put him in a small boat, and rowed north alone"],"rows":[["1","buta-ra","buta","VERB","VERB","7","0","advcl","root","caught","catch","catch-ing","VerbForm=Conv"],["2","niyalma","niyalma","NOUN","PRON","7","1","obj","nsubj","Someone","niyalma","","Case=Acc"],["3","obu-fi","obu","VERB","VERB","7","1","parataxis","conj","put","make","make-ing","Aspect=Perf|Mood=Ind|VerbForm=Fin"],["4","ajige","ajige","DET","ADJ","7","5","det","amod","small","small","small","PronType=Dem"],["5","weihu-de","weihu","NOUN","NOUN","7","3","nmod","obl","boat","boat","boat-in","Case=Loc"],["6","te-fi","te","VERB","CCONJ","7","8","parataxis","cc","and","sit","sit-ing","Aspect=Perf|Mood=Ind|VerbForm=Fin"],["7","emhun","emhun","PRON","PUNCT","8","3","nsubj","punct",",","I","I/He","Case=Acc|PronType=Prs"],["8","suru-me","suru","VERB","VERB","0","1","root","conj","rowed","row","row-ing","VerbForm=Conv"],["9","amargi","amargi","ADV","ADV","8","8","advmod","advmod","alone","north","north.alone","_"]]},"Manchu_grammar_64":{"comments":["# sent_id = Manchu_grammar_64","# text = uheri tofohon indahūn bi","# text[eng] = Altogether I have fifteen dogs."],"rows":[["1","uheri","uheri","ADV","ADV","4","0","advmod","advmod","Altogether","altogether","altogether","_"],["2","tofohon","tofohon","NUM","NUM","3","3","nummod","nummod","fifteen","fifteen","fifteen","NumType=Card"],["3","indahūn","indahūn","NOUN","NOUN","4","0","nsubj","obj","dogs","dog","dog","_"],["4","bi","bi","VERB","PUNCT","0","0","root","punct",".","exist","be.exist","_"]]},"Manchu_grammar_73":{"comments":["# sent_id = Manchu_grammar_73","# text = K'an Ze bithe-be gai-fi uthai tere dobori beye-be nimaha","# text[eng] = K’an Ze, having taken the letter at once, caught fish himself that night."],"rows":[["1","K'an","K'an","PROPN","PROPN","4","5","nsubj","nsubj","K","K'an","","_"],["2","Ze","Ze","PROPN","PROPN","4","1","nsubj:outer","appos","Ze","Ze","","_"],["3","bithe-be","bithe","NOUN","NOUN","4","4","obj","obj","letter","letter","letter","Case=Acc"],["4","gai-fi","gai","VERB","VERB","0","2","root","acl","taken","take","take-ing","Aspect=Perf|VerbForm=Part"],["5","uthai","uthai","ADV","VERB","4","0","advmod","root","caught","at","at.once","_"],["6","tere","tere","DET","DET","7","3","det","det","the","tere","","PronType=Dem"],["7","dobori","dobori","NOUN","NOUN","4","5","iobj","obj","fish","fish","fish","Case=Acc"],["8","beye-be","beye","PRON","PRON","7","7","compound:prt","nmod:unmarked","himself","self","self","Case=Acc|Number=Sing|Person=3|PronType=Prs"],["9","nimaha","nimaha","ADV","PUNCT","4","5","advmod","punct",".","night","that.night","_"]]},"Manchu_grammar_67":{"comments":["# sent_id = Manchu_grammar_67","# text = boode sunja indahvn bi","# text[eng] = There are 5 dogs at home."],"rows":[["1","boode","boo","NOUN","NOUN","4","0","obl","obl","home","house","house","_"],["2","sunja","sunja","NUM","NUM","3","3","nummod","nummod","5","five","five","NumType=Card"],["3","indahvn","indahvn","NOUN","NOUN","4","0","nsubj","nsubj","dogs","dog","dog","_"],["4","bi","bi","VERB","PUNCT","0","0","root","punct",".","exist","be.exist","_"]]},"Manchu_grammar_68":{"comments":["# sent_id = Manchu_grammar_68","# text = Hûwang ubaliya-kai besergen-ci ebu-fi","# text[eng] = (Someone) got out of bed emphatically"],"rows":[["1","Hûwang","G'ai","PROPN","PUNCT","0","0","root","punct","(","Hûwang","","_"],["2","ubaliya-kai","ubaliya","VERB","VERB","1","0","parataxis","root","got","turn","turn.over","Mood=Ind|VerbForm=Fin"],["3","besergen-ci","besergen","NOUN","NOUN","1","2","parataxis","obl","bed","bed","from.bed","Case=Abl"],["4","ebu-fi","ebu","VERB","ADV","1","2","parataxis","advmod","emphatically","ebu","","Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin"]]},"Manchu_grammar_71":{"comments":["# sent_id = Manchu_grammar_71","# text = yabu-ci aca-mbi","# text[eng] = (You) must act"],"rows":[["1","yabu-ci","yabu","VERB","VERB","2","0","advcl","root","act","act","act-ing","VerbForm=Conv"],["2","aca-mbi","aca","VERB","AUX","0","1","root","aux","must","must","must","Mood=Imp|Polarity=Pos|VerbForm=Fin"]]},"Manchu_grammar_79":{"comments":["# sent_id = Manchu_grammar_79","# text = Gurun-i K'an_Ze K'an_Ze-de dalda-ra amba weile bi-fi cohome acanji-me","# text[eng] = The kingdom's K'an Ze, hiding an important matter, especially met with (someone)"],"rows":[["1","Gurun-i","Gurun","NOUN","NOUN","2","2","nmod:poss","nmod:poss","kingdom","kingdom","kingdom-'s","Case=Gen"],["2","K'an_Ze","K'an_Ze","PROPN","PROPN","6","8","nsubj","nsubj","K","K'an_Ze","","_"],["3","K'an_Ze-de","K'an_Ze","PROPN","PUNCT","6","4","nmod","punct",",","by","-by","Case=Dat"],["4","dalda-ra","dalda","VERB","VERB","6","2","advcl","acl","hiding","hide","hide-ing","VerbForm=Conv"],["5","amba","amba","ADJ","ADJ","6","6","amod","amod","important","big","big","_"],["6","weile","weile","NOUN","NOUN","0","4","root","obj","matter","matter","matter.be-ing","_"],["7","bi-fi","bi","VERB","ADV","6","8","conj","advmod","especially","especially","especially","Aspect=Perf|Mood=Ind|VerbForm=Fin"],["8","cohome","cohome","ADV","VERB","6","0","advmod","root","met","meet","meet-ing","_"],["9","acanji-me","acanji","VERB","PUNCT","6","0","advcl","punct",")","especially","especially","VerbForm=Conv"]]},"Manchu_grammar_81":{"comments":["# sent_id = Manchu_grammar_81","# text = Tere dobori Z'oo Z'oo olhon-i ing-de bi-hebi Cooha-i","# text[eng] = That night, at Z'oo Z'oo dry land's camp, there was (the army)"],"rows":[["1","Tere","tere","DET","DET","5","2","det","det","That","that","that","PronType=Dem"],["2","dobori","dobori","NOUN","NOUN","5","0","nmod","obl:unmarked","night","night","night","Case=Loc"],["3","Z'oo","Z'oo","PROPN","NOUN","4","6","compound","nmod:poss","Z","Z'oo","","_"],["4","Z'oo","Z'oo","PROPN","NOUN","5","0","compound","case","Z","Z'oo","","_"],["5","olhon-i","olhon","NOUN","ADJ","6","0","nmod:poss","amod","dry","dry_land","dry land-'s","Case=Gen"],["6","ing-de","ing","ADV","NOUN","8","0","obl","obl","camp","camp","camp-in","_"],["7","bi-hebi","bi","VERB","DET","8","8","acl","det","the","ed","be-ed","Aspect=Perf|Mood=Ind|VerbForm=Fin"],["8","Cooha-i","cooha","VERB","NOUN","0","0","root","nsubj","army","army","army-'s","Aspect=Perf|Mood=Ind|VerbForm=Fin"]]},"Manchu_grammar_82":{"comments":["# sent_id = Manchu_grammar_82","# text = niyalma alana-ra jakade Z'oo Z'oo hendu-me Jiyansi waka sem-e-o","# text[eng] = After reporting, the men said: \"Did the spy not act?\""],"rows":[["1","niyalma","niyalma","NOUN","NOUN","2","6","nsubj","nsubj","men","men","men","Case=Nom"],["2","alana-ra","alana","VERB","VERB","7","6","advcl","advcl","reporting","report","report-ing","VerbForm=Conv"],["3","jakade","jakade","ADV","SCONJ","2","2","advmod","mark","After","after","after","_"],["4","Z'oo","Z'oo","PROPN","PUNCT","5","9","compound","punct",":","Z'oo","","_"],["5","Z'oo","Z'oo","PROPN","PUNCT","7","2","nmod","punct",",","Z'oo","","_"],["6","hendu-me","hendu","VERB","VERB","7","0","advcl","root","said","say","say-ing","VerbForm=Conv"],["7","Jiyansi","Jiyansi","PROPN","NOUN","0","9","root","nsubj","spy","spy","spy","_"],["8","waka","waka","ADV","PART","9","9","advmod","advmod","not","not","not","Polarity=Neg"],["9","sem-e-o","sem","VERB","VERB","7","6","ccomp","ccomp","act","act","act","Mood=Int|Polarity=Neg|VerbForm=Fin"]]},"Manchu_grammar_69":{"comments":["# sent_id = Manchu_grammar_69","# text = hengkile-me baniha bu-he","# text[eng] = (Someone) gave thanks while kowtowing"],"rows":[["1","hengkile-me","hengkile","VERB","VERB","0","0","root","root","gave","kowtow","kowtow-ing","VerbForm=Conv"],["2","baniha","baniha","NOUN","NOUN","1","1","parataxis","obj","thanks","thanks","thanks","_"],["3","bu-he","bu","VERB","VERB","1","1","parataxis","advcl","kowtowing","bu","","Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin"]]},"Manchu_grammar_72":{"comments":["# sent_id = Manchu_grammar_72","# text = Hûwang hendu-me Bithe ara-me waji-habi","# text[eng] = Hûwang G’ai said: “He has finished writing the letter.”"],"rows":[["1","Hûwang","G'ai","PROPN","PROPN","3","2","nsubj","nsubj","Hûwang","Hûwang","","_"],["2","hendu-me","hendu","VERB","VERB","0","0","root","root","said","say","say-ing","VerbForm=Conv"],["3","Bithe","bithe","NOUN","NOUN","2","4","parataxis","obj","letter","letter","letter","Case=Acc"],["4","ara-me","ara","VERB","VERB","2","0","parataxis","xcomp","writing","write","write-ing","VerbForm=Conv"],["5","waji-habi","waji","VERB","PUNCT","3","0","parataxis","punct","”","finish","finish-ed","Aspect=Perf|Mood=Ind|Number=Sing|Person=3|VerbForm=Fin"]]},"Manchu_grammar_80":{"comments":["# sent_id = Manchu_grammar_80","# text = ji-hebi se-me hendu","# text[eng] = Having come, (he) said!"],"rows":[["1","ji-hebi","ji","VERB","VERB","3","2","advcl","advcl","come","come","come-ed","Aspect=Perf|Mood=Ind|VerbForm=Fin"],["2","se-me","se","VERB","VERB","3","0","advcl","root","said","say","say-ing","VerbForm=Conv"],["3","hendu","hendu","VERB","PUNCT","0","2","root","punct","!","say","say","Mood=Ind|Tense=Pres|VerbForm=Fin"]]}};
+const TREEBANK = "Manchu-GDUD";
+const labels = Object.keys(M).sort();
+const tbl = document.getElementById('tbl');
+
+let maxV = 1;
+for (const g of labels)
+  for (const p of labels)
+    if (g !== p && M[g] && M[g][p]) maxV = Math.max(maxV, M[g][p]);
+
+const hrow = tbl.insertRow();
+const corner = document.createElement('th');
+corner.className = 'rh';
+corner.textContent = 'gold \ pred';
+hrow.appendChild(corner);
+for (const p of labels) {
+  const th = document.createElement('th');
+  th.className = 'col-label';
+  th.textContent = p;
+  hrow.appendChild(th);
+}
+
+let sel = null;
+for (const g of labels) {
+  const row = tbl.insertRow();
+  const rh = document.createElement('th');
+  rh.className = 'rh';
+  rh.textContent = g;
+  row.appendChild(rh);
+  for (const p of labels) {
+    const td = row.insertCell();
+    const cnt = (M[g] && M[g][p]) || 0;
+    td.textContent = cnt || '';
+    if (g === p) {
+      td.className = 'diag';
+      td.title = cnt + ' correct';
+    } else if (cnt > 0) {
+      const t = cnt / maxV;
+      const ch = Math.round(255 * (1 - t * 0.8));
+      td.style.background = 'rgb(255,' + ch + ',' + ch + ')';
+      td.id = g + '--' + p;
+      td.className = 'click';
+      td.title = 'gold:' + g + ' → pred:' + p + ': ' + cnt;
+      td.addEventListener('click', (function(gl, pl, c, cell) {
+        return function() { show(gl, pl, c, cell); };
+      })(g, p, cnt, td));
+    }
+  }
+}
+
+function show(gL, pL, cnt, cell) {
+  history.replaceState(null, '', '#' + gL + '--' + pL);
+  if (sel) sel.classList.remove('sel');
+  cell.classList.add('sel');
+  sel = cell;
+  document.getElementById('sel-hdr').textContent =
+    'gold: ' + gL + '  →  pred: ' + pL + '  (' + cnt + ' sentence' + (cnt !== 1 ? 's' : '') + ')';
+  document.getElementById('sentences-section').scrollIntoView({ behavior: 'smooth' });
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  const corpus = (TREEBANK.startsWith('UD_') ? TREEBANK : 'UD_' + TREEBANK) + '@2.18';
+  const sents = S[gL + '→' + pL] || [];
+  for (const [sid, tids] of sents) {
+    const sent = SENTS[sid] || {};
+    const grewUrl = 'https://universal.grew.fr/?corpus=' + corpus +
+      '&request=' + encodeURIComponent('pattern { meta.sent_id = "' + sid + '" }');
+    const d = document.createElement('div');
+    d.className = 'pair';
+    d.innerHTML =
+      '<div class="pair-id"><a href="' + grewUrl + '" target="_blank">' + esc(sid) + '</a></div>' +
+      '<div style="overflow-x:auto">' + renderTable(sent.comments, sent.rows, tids) + '</div>';
+    list.appendChild(d);
+  }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+const HDRS = ["ID", "FORM", "LEMMA", "UPOS", "UPOS·p", "HEAD", "HEAD·p", "DEPREL", "DEPREL·p", "AlignedToken", "AlignGloss", "Gloss", "FEATS"];
+const PRED_COLS = new Set([4, 6, 8]);
+const PRED_GOLD = new Map([[4, 3], [6, 5], [8, 7]]);
+
+function renderTable(comments, rows, tokenIds) {
+  const ids = new Set(tokenIds || []);
+  let h = '';
+  if (comments && comments.length)
+    h += '<div class="sent-comments">' + comments.map(esc).join('<br>') + '</div>';
+  h += '<table class="sent-tbl"><thead><tr>';
+  HDRS.forEach((hdr, i) => {
+    h += '<th' + (PRED_COLS.has(i) ? ' class="pred-col"' : '') + '>' + esc(hdr) + '</th>';
+  });
+  h += '</tr></thead><tbody>';
+  for (const row of rows) {
+    const hl = ids.has(row[0]);
+    h += '<tr' + (hl ? ' class="hl-line"' : '') + '>';
+    row.forEach((cell, i) => {
+      const goldIdx = PRED_GOLD.get(i);
+      const mismatch = goldIdx !== undefined && cell !== row[goldIdx];
+      const cls = (PRED_COLS.has(i) ? 'pred-col' : '') + (mismatch ? ' mismatch' : '');
+      h += '<td' + (cls.trim() ? ' class="' + cls.trim() + '"' : '') + '>' + esc(cell) + '</td>';
+    });
+    h += '</tr>';
+  }
+  h += '</tbody></table>';
+  return h;
+}
+
+if (location.hash) {
+  const cell = document.getElementById(location.hash.slice(1));
+  if (cell) { cell.click(); cell.scrollIntoView({ behavior: 'instant', block: 'center' }); }
+}
+</script>
+</body>
+</html>

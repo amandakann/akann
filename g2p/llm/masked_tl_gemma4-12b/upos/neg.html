@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>UPOS &mdash; Negidal-GDUD</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+Tangut&display=swap">
+<style>
+* { box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
+#hdr { padding: 8px 16px; background: #2c3e50; color: #fff; flex-shrink: 0; position: relative; }
+#hdr h1 { margin: 0; font-size: 1.1em; }
+#hdr a.back { position: absolute; top: 8px; right: 16px; color: #cfe3f2; font-size: 0.85em; text-decoration: none; }
+#hdr a.back:hover { text-decoration: underline; }
+#stats { margin: 2px 0 0; font-size: 0.8em; opacity: 0.8; }
+#matrix-section { padding: 12px 16px; overflow-x: auto; }
+#sentences-section { padding: 12px 16px; border-top: 2px solid #bbb; }
+#sel-hdr { font-weight: bold; margin-bottom: 10px; color: #2c3e50; min-height: 1.4em; }
+#placeholder { color: #aaa; font-style: italic; padding: 40px; text-align: center; }
+table { border-collapse: collapse; font-size: 0.75em; }
+th { background: #ecf0f1; position: sticky; top: 0; z-index: 1; padding: 4px 6px; border: 1px solid #bbb; }
+th.rh { text-align: left; position: sticky; left: 0; z-index: 2; }
+th.col-label { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; vertical-align: bottom; height: 120px; padding: 4px 2px; text-align: left; }
+td { padding: 3px 8px; border: 1px solid #ddd; text-align: right; min-width: 36px; font-variant-numeric: tabular-nums; }
+td.diag { background: #f0f0f0; color: #999; }
+td.click { cursor: pointer; }
+td.click:hover { filter: brightness(0.88); }
+td.sel { outline: 2px solid #2980b9; outline-offset: -2px; }
+.pair { margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
+.pair-id { background: #f8f8f8; padding: 3px 10px; font-size: 0.82em; color: #555; border-bottom: 1px solid #ddd; font-family: monospace; }
+.pair-id a { color: #2980b9; text-decoration: underline; font-size: 1.1em; }
+.pair-id a:hover { color: #1a5276; }
+.sent-comments { font-family: monospace, "Noto Serif Tangut"; font-size: 0.73em; color: #555; padding: 3px 8px; border-bottom: 1px solid #eee; }
+.sent-tbl { width: 100%; border-collapse: collapse; font-size: 0.72em; font-family: monospace, "Noto Serif Tangut"; }
+.sent-tbl th, .sent-tbl td { padding: 2px 6px; border: 1px solid #ddd; text-align: left; white-space: nowrap; }
+.sent-tbl th { background: #ecf0f1; font-family: system-ui, sans-serif; }
+.sent-tbl th.pred-col, .sent-tbl td.pred-col { background: #eaf4fb; }
+.sent-tbl th:nth-child(4), .sent-tbl td:nth-child(4),
+.sent-tbl th:nth-child(10), .sent-tbl td:nth-child(10),
+.sent-tbl th:nth-child(13), .sent-tbl td:nth-child(13) { border-left: 2px solid #aaa; }
+.sent-tbl th:nth-child(6), .sent-tbl td:nth-child(6),
+.sent-tbl th:nth-child(8), .sent-tbl td:nth-child(8) { border-left: 1.5px solid #aaa; }
+tr.hl-line td { background: #fffbcc !important; }
+tr.hl-line td.pred-col { background: #fff5a0 !important; }
+.sent-tbl td.mismatch { background: #fde8e8; }
+</style>
+</head>
+<body>
+<div id="hdr">
+  <a class="back" href="../index.html">&larr; Index</a>
+  <h1>Negidal-GDUD</h1>
+  <div id="stats">13 sents &middot; 62 tokens &middot; UPOS 88.7% &middot; UAS 58.1% &middot; LAS 48.4% &middot; CLAS 42.0% &middot; CORELAS 57.7% &middot; DEPREL 61.3%</div>
+</div>
+<div id="matrix-section"><table id="tbl"></table></div>
+<div id="sentences-section">
+  <div id="sel-hdr"></div>
+  <div id="list"><div id="placeholder">Click a confusion cell to see examples</div></div>
+</div>
+<script>
+const M = {"ADJ":{"ADJ":1},"ADP":{"ADP":1},"ADV":{"ADP":1,"ADV":3,"PART":1},"DET":{"DET":1},"NOUN":{"NOUN":23},"NUM":{"NUM":1},"PART":{},"PRON":{"PRON":2},"PROPN":{"NOUN":1,"PROPN":1},"PUNCT":{"PUNCT":8},"VERB":{"VERB":14,"X":4},"X":{}};
+const S = {"ADV→PART":[["negidal_grammar_55",["1"]]],"ADV→ADP":[["negidal_grammar_62",["1"]]],"VERB→X":[["negidal_grammar_55",["4"]],["negidal_grammar_57",["3","6","7"]]],"PROPN→NOUN":[["negidal_grammar_61",["1"]]]};
+const SENTS = {"negidal_grammar_55":{"comments":["# sent_id = negidal_grammar_55","# text = Taj Čukčagir boγa-dū-n bi-čā-n omən asī.","# text[eng] = In Chukchagir one woman lived."],"rows":[["1","Taj","Taj","ADV","PART","2","0","advmod","root","that","_"],["2","Čukčagir","Čukčagir","PROPN","PROPN","3","3","nmod","nmod","Chukchagir","_"],["3","boγa-dū-n","boγa","NOUN","NOUN","4","4","obl","nmod","land-Dat-3Sg","Case=Dat|Person=3"],["4","bi-čā-n","bi","VERB","X","0","1","root","dep","be-Praet-3Sg","Number=Sing|Person=3|Tense=Past"],["5","omən","omən","NUM","NUM","6","6","nummod","nummod","one","_"],["6","asī","asī","NOUN","NOUN","4","4","nsubj","nsubj","woman","_"],["7",".",".","PUNCT","PUNCT","4","4","punct","punct","","_"]]},"negidal_grammar_62":{"comments":["# sent_id = negidal_grammar_62","# text = Nuŋən window-lī ičə-jə-n taj commissioner əmə-je-va-n.","# text[eng] = She sees in the window the commissioner coming."],"rows":[["1","Nuŋən","nuŋən","ADV","ADP","3","3","advmod","case","in","_"],["2","window-lī","window","NOUN","NOUN","3","1","obl","nmod","window-Prol","_"],["3","ičə-jə-n","ičə","VERB","VERB","0","0","root","root","see-Pres-3Sg","Number=Sing|Person=3|Tense=Pres"],["4","taj","taj","DET","DET","5","5","det","det","that","PronType=Dem"],["5","commissioner","commissioner","NOUN","NOUN","3","3","obj","obj","commissioner","_"],["6","əmə-je-va-n","əmə","VERB","VERB","5","5","acl","xcomp","come-PartPraet-Acc-3Sg","Case=Acc|Person=3|Tense=Past|VerbForm=Part"],["7",".",".","PUNCT","PUNCT","3","3","punct","punct","","_"]]},"negidal_grammar_57":{"comments":["# sent_id = negidal_grammar_57","# text = Ətikāŋi-nin āčin ō-ča-la-n noŋan-mā-n nəkun-in gəla-l-čā gəla-l-čā","# text[eng] = When the husband died the older brother started asking her in marriage."],"rows":[["1","Ətikāŋi-nin","ətikāŋi","NOUN","NOUN","3","0","nsubj","root","husband-3Sg","Person=3"],["2","āčin","āčin","ADP","ADP","3","3","case","case","without","_"],["3","ō-ča-la-n","ō","VERB","X","7","1","advcl","dep","become-PartPraet-Loc-3Sg","Case=Loc|Person=3|Tense=Past|VerbForm=Part"],["4","noŋan-mā-n","noŋan","PRON","PRON","7","3","obj","obj","he-Acc-3Sg","Case=Acc|Person=3|PronType=Prs"],["5","nəkun-in","nəkun","NOUN","NOUN","7","6","nsubj","nsubj","younger.brother-3Sg","Person=3"],["6","gəla-l-čā","gəla","VERB","X","7","1","reparandum","dep","ask-Inch-Praet","Tense=Past"],["7","gəla-l-čā","gəla","VERB","X","0","1","root","dep","ask-Praet","Tense=Past"]]},"negidal_grammar_61":{"comments":["# sent_id = negidal_grammar_61","# text = Rayispolkom-dukin əmə-vač-ča-n.","# text[eng] = He used to come from rayispolkom."],"rows":[["1","Rayispolkom-dukin","Rayispolkom","PROPN","NOUN","2","2","obl","obl","rayispolkom-Abl","Case=Abl"],["2","əmə-vač-ča-n","əmə","VERB","VERB","0","0","root","root","come-Habit-Praet-3Sg","Aspect=Hab|Number=Sing|Person=3|Tense=Past"],["3",".",".","PUNCT","PUNCT","2","2","punct","punct","","_"]]}};
+const TREEBANK = "Negidal-GDUD";
+const labels = Object.keys(M).sort();
+const tbl = document.getElementById('tbl');
+
+let maxV = 1;
+for (const g of labels)
+  for (const p of labels)
+    if (g !== p && M[g] && M[g][p]) maxV = Math.max(maxV, M[g][p]);
+
+const hrow = tbl.insertRow();
+const corner = document.createElement('th');
+corner.className = 'rh';
+corner.textContent = 'gold \ pred';
+hrow.appendChild(corner);
+for (const p of labels) {
+  const th = document.createElement('th');
+  th.className = 'col-label';
+  th.textContent = p;
+  hrow.appendChild(th);
+}
+
+let sel = null;
+for (const g of labels) {
+  const row = tbl.insertRow();
+  const rh = document.createElement('th');
+  rh.className = 'rh';
+  rh.textContent = g;
+  row.appendChild(rh);
+  for (const p of labels) {
+    const td = row.insertCell();
+    const cnt = (M[g] && M[g][p]) || 0;
+    td.textContent = cnt || '';
+    if (g === p) {
+      td.className = 'diag';
+      td.title = cnt + ' correct';
+    } else if (cnt > 0) {
+      const t = cnt / maxV;
+      const ch = Math.round(255 * (1 - t * 0.8));
+      td.style.background = 'rgb(255,' + ch + ',' + ch + ')';
+      td.id = g + '--' + p;
+      td.className = 'click';
+      td.title = 'gold:' + g + ' → pred:' + p + ': ' + cnt;
+      td.addEventListener('click', (function(gl, pl, c, cell) {
+        return function() { show(gl, pl, c, cell); };
+      })(g, p, cnt, td));
+    }
+  }
+}
+
+function show(gL, pL, cnt, cell) {
+  history.replaceState(null, '', '#' + gL + '--' + pL);
+  if (sel) sel.classList.remove('sel');
+  cell.classList.add('sel');
+  sel = cell;
+  document.getElementById('sel-hdr').textContent =
+    'gold: ' + gL + '  →  pred: ' + pL + '  (' + cnt + ' sentence' + (cnt !== 1 ? 's' : '') + ')';
+  document.getElementById('sentences-section').scrollIntoView({ behavior: 'smooth' });
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  const corpus = (TREEBANK.startsWith('UD_') ? TREEBANK : 'UD_' + TREEBANK) + '@2.18';
+  const sents = S[gL + '→' + pL] || [];
+  for (const [sid, tids] of sents) {
+    const sent = SENTS[sid] || {};
+    const grewUrl = 'https://universal.grew.fr/?corpus=' + corpus +
+      '&request=' + encodeURIComponent('pattern { meta.sent_id = "' + sid + '" }');
+    const d = document.createElement('div');
+    d.className = 'pair';
+    d.innerHTML =
+      '<div class="pair-id"><a href="' + grewUrl + '" target="_blank">' + esc(sid) + '</a></div>' +
+      '<div style="overflow-x:auto">' + renderTable(sent.comments, sent.rows, tids) + '</div>';
+    list.appendChild(d);
+  }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+const HDRS = ["ID", "FORM", "LEMMA", "UPOS", "UPOS·p", "HEAD", "HEAD·p", "DEPREL", "DEPREL·p", "Gloss", "FEATS"];
+const PRED_COLS = new Set([4, 6, 8]);
+const PRED_GOLD = new Map([[4, 3], [6, 5], [8, 7]]);
+
+function renderTable(comments, rows, tokenIds) {
+  const ids = new Set(tokenIds || []);
+  let h = '';
+  if (comments && comments.length)
+    h += '<div class="sent-comments">' + comments.map(esc).join('<br>') + '</div>';
+  h += '<table class="sent-tbl"><thead><tr>';
+  HDRS.forEach((hdr, i) => {
+    h += '<th' + (PRED_COLS.has(i) ? ' class="pred-col"' : '') + '>' + esc(hdr) + '</th>';
+  });
+  h += '</tr></thead><tbody>';
+  for (const row of rows) {
+    const hl = ids.has(row[0]);
+    h += '<tr' + (hl ? ' class="hl-line"' : '') + '>';
+    row.forEach((cell, i) => {
+      const goldIdx = PRED_GOLD.get(i);
+      const mismatch = goldIdx !== undefined && cell !== row[goldIdx];
+      const cls = (PRED_COLS.has(i) ? 'pred-col' : '') + (mismatch ? ' mismatch' : '');
+      h += '<td' + (cls.trim() ? ' class="' + cls.trim() + '"' : '') + '>' + esc(cell) + '</td>';
+    });
+    h += '</tr>';
+  }
+  h += '</tbody></table>';
+  return h;
+}
+
+if (location.hash) {
+  const cell = document.getElementById(location.hash.slice(1));
+  if (cell) { cell.click(); cell.scrollIntoView({ behavior: 'instant', block: 'center' }); }
+}
+</script>
+</body>
+</html>
